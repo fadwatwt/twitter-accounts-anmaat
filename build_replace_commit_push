@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# 0. change node version
+nvm use lts
+
+# 1. Build
+# type [Enter] to continue
+read -p "Press [Enter] key to start build..."
+cd ../twtFrontEnd   
+npm run build
+
+
+# 2. Replace
+# type [Enter] to continue
+read -p "Press [Enter] key to start replace..."
+cd -
+sudo rm -rf ./build
+sudo cp -r ../twtFrontEnd/build ./build
+
+# 3. Commit
+# type [Enter] to continue
+read -p "Press [Enter] key to start commit..."
+git add ./build
+git commit -m "replace build files"
+
+# 4. Push
+# type [Enter] to continue
+read -p "Press [Enter] key to start push..."
+git push
+
+# 5. Create PR
+# type [Enter] to continue
+read -p "Press [Enter] key to start create PR..."
+~/scripts/create_pr

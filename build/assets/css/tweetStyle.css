@@ -1,0 +1,36 @@
+.home-summary-panel{
+    display:flex;
+    justify-content: space-between;
+}
+.DataPoint-info{
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: center;
+}
+
+.DataPoint-trend--positive{
+    color:#1dd871;
+    margin-left: 5px;
+}
+.DataPoint-trend--positive:before{ /* Font family that contains the Bootstrap Icons */
+    content: "\f062";
+    font-family: FontAwesome;
+}
+
+.DataPoint-trend--negative{
+    color: #e13333;
+    margin-left: 5px;
+}
+
+.DataPoint-trend--negative:before{ /* Font family that contains the Bootstrap Icons */
+    content: "\f063";
+    font-family: FontAwesome;
+}
+
+.custom-delete-button {
+    width: 20px; /* Adjust the width as needed */
+    height: 20px; /* Adjust the height as needed */
+    padding: 0; /* Remove default padding */
+    font-size: 12px; /* Adjust the font size as needed */
+    line-height: 1; /* Adjust the line height as needed */
+}
