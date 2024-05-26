@@ -37,6 +37,7 @@ router.route('/:user_id').get(
     authService.allowedTo(
         roles.publisherWriter,
         roles.writer,
+        roles.publisher,
         roles.advancePublisher,
         roles.advancePublisherUpload,
         roles.admin,
@@ -49,6 +50,7 @@ router.route('/chat/:chat_id').get(
     authService.protect,
     authService.allowedTo(
         roles.publisherWriter,
+        roles.publisher,
         roles.writer,
         roles.advancePublisher,
         roles.advancePublisherUpload,
@@ -62,6 +64,7 @@ router.route('/unread/:user_id').get(
     authService.protect,
     authService.allowedTo(
         roles.publisherWriter,
+        roles.publisher,
         roles.writer,
         roles.advancePublisher,
         roles.advancePublisherUpload,
