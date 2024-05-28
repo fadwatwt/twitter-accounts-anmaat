@@ -23,7 +23,7 @@ const {
   getTasksEmployee,
   returnTasksToEmployee,
   deleteCard,
-  updateCard
+  updateCard, moveTasks
 } = require('../services/taskService');
 
 
@@ -62,6 +62,9 @@ router.post(
   GroupDeleteValidator,
   deleteManyTasks
 );
+
+router.route('/move').post(authService.protect,
+  authService.allowedTo(roles.admin , roles.manager),moveTasks)
 
 router
   .route('/delivery')

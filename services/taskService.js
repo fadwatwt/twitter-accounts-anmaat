@@ -1,5 +1,6 @@
 const factory = require('./handlersFactory');
 const Job = require('../model/taskModel');
+const User = require('../model/userModel');
 const TaskCard = require('../model/taskCardModel');
 const asyncHandler = require('express-async-handler');
 
@@ -9,6 +10,40 @@ const asyncHandler = require('express-async-handler');
 // @access  Private
 exports.getJobs = factory.getAll(Job);
 
+exports.moveTasks = asyncHandler(async (req, res) => {
+    const idNewUser = req.body.idNewUser
+    const idPerUser = req.body.idPerUser
+
+    // التحقق من وجود المستخدمين
+    const perUser = await User.findById(idPerUser);
+    const newUser = await User.findById(idNewUser);
+
+    if (!perUser || !newUser) {
+        return res.status(404).json({ message: 'المستخدم غير موجود' });
+    }
+
+    // تحديث المهام لنقلها إلى المستخدم الجديد
+    const tasks = await Job.updateMany({ assignTo: idPerUser }, { assignTo: idNewUser });
+
+    // إذا لم يتم العثور على أي مهام للتحديث
+    if (tasks.nModified === 0) {
+        return res.status(404).json({ message: 'لم يتم العثور على أي مهام للنقل' });
+    }
+
+    // الحصول على المهام التي تم نقلها
+    const movedTasks = await Job.find({ assignTo: idNewUser });
+
+    // تحديث حقل tasks في المستخدم القديم
+    perUser.tasks = perUser.tasks.filter(taskId => !movedTasks.some(task => task._id.equals(taskId)));
+    await perUser.save();
+
+    // تحديث حقل tasks في المستخدم الجديد
+    newUser.tasks = newUser.tasks.concat(movedTasks.map(task => task._id));
+    await newUser.save();
+
+    res.status(200).json({ message: 'تم نقل المهام بنجاح', tasks: movedTasks });
+});
+
 // @desc    Get specific job by id
 // @route   GET /api/v1/jobs/:id
 // @access  Private
@@ -17,7 +52,24 @@ exports.getJob = factory.getOne(Job);
 // @desc    Create Job
 // @route   POST  /api/v1/jobs
 // @access  Private/Admin
-exports.createJob = factory.createOne(Job);
+exports.createJob = asyncHandler(async (req,res) => {
+    const { name, assignTo, description, priority, assignOn, deadline, taskTime } = req.body;
+
+    const newTask = await Job.create({
+        name,
+        assignTo,
+        description,
+        priority,
+        assignOn,
+        deadline,
+        taskTime
+    });
+
+    // 2. تحديث المستخدم لإضافة معرف المهمة الجديدة إلى مصفوفة المهام الخاصة به
+   const user = await User.findByIdAndUpdate(assignTo, { $push: { tasks: newTask._id } },);
+
+    res.status(201).json({ data: user });
+})
 
 // @desc    Update specific Job
 // @route   PUT /api/v1/jobs/:id

@@ -34,6 +34,32 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/users
 // @access  Private
 exports.getUsers = factory.getAll(User, 'users');
+
+exports.getUsersWithTasks = asyncHandler(async (req, res) => {
+  // قراءة معلمات الاستعلام
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const skip = (page - 1) * limit;
+
+  // تنفيذ الاستعلام مع التصفح
+  const users = await User.find()
+    .select('socialType slug role type holidays isHashTagAllow name email tasks')
+    .skip(skip)
+    .limit(limit)
+    .exec();
+
+  // الحصول على العدد الإجمالي للمستخدمين لتحديد عدد الصفحات الكلي
+  const total = await User.countDocuments();
+
+  // إرجاع النتائج مع معلومات التصفح
+  res.status(200).json({
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+    data: users,
+  });
+});
 // @desc    Get specific user by id
 // @route   GET /api/v1/users/:id
 // @access  Private/Admin
@@ -190,17 +216,7 @@ exports.updateUserAdmin = factory.updateOne(User);
 /////delete set of users
 // @route   POST /api/v1/users/delete
 // @access  Private
-exports.deleteManyUser = asyncHandler(async (req,res) => {
-  const { ids } = req.body;
-   const result = await User.deleteMany({_id: { $in: ids} })
-
-  if (result.deletedCount > 0) {
-    res.status(200).json({ success: true, message: ` تم حذف عدد ${result.deletedCount} من الموظفين بنجاح ` });
-  } else {
-    res.status(404).json({ success: false, message: "لا يوجد موظفين للحذف." });
-  }
-
-})
+exports.deleteManyUser = factory.deleteMany(User);
 
 exports.searchUses = asyncHandler(async (req, res, next) => {
   const name = req.params.name;

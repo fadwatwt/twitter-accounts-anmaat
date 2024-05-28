@@ -56,6 +56,12 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: 'Department',
     },
+    tasks: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Task',
+      }
+      ],
     socialType: {
       type: Array,
     },
@@ -85,6 +91,7 @@ userSchema.pre(/^find/, function (next) {
   });
   next();
 });
+
 // Object.assign(userSchema.statics, {
 //   roles,
 // });

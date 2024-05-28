@@ -30,7 +30,7 @@ const {
   updateUserAdmin,
   deleteManyUser,
   searchUses,
-  getUserName
+  getUserName, getUsersWithTasks
 } = require('../services/userService');
 
 const authService = require('../services/authService');
@@ -65,6 +65,7 @@ router.put(
   changeUserPasswordValidator,
   changeUserPassword
 );
+router.route('/withTasks').get(getUsersWithTasks)
 router
   .route('/')
   .get(getUsers)
@@ -104,4 +105,5 @@ router
     ),
     getUserName
   )
+
 module.exports = router;
