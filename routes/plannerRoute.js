@@ -21,6 +21,7 @@ router.route('/').get(
 router.route('/:user_id').get(
     authService.protect,
     authService.allowedTo(roles.publisherWriter,
+        roles.publisher,
         roles.writer,
         roles.advancePublisher,
         roles.advancePublisherUpload,

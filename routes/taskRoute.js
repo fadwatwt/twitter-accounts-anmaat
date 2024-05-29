@@ -73,6 +73,7 @@ router
     authService.allowedTo(
       roles.publisherWriter,
       roles.writer,
+      roles.publisher,
       roles.advancePublisher,
       roles.advancePublisherUpload,
       roles.admin,
