@@ -7,16 +7,31 @@ const multer = require('multer');
 const path = require('path');
 
 exports.createChat = asyncHandler(async (req, res, next) => {
-    try{
-        const conversation = await Conversation.create({
-            name: req.body.name,
-            members: req.body.members,
-            type: req.body.type,
-            date: req.body.date
-          });
-        res.status(200).json({ data: conversation});
-    }catch(e){ 
-        console.log(e)
+    try {
+        const { name, members, type, date } = req.body;
+
+        // Check if a conversation with the same members already exists
+        let conversation = await Conversation.findOne({
+            members: { $all: members, $size: members.length },
+            type: type // Optionally, ensure the type matches too if needed
+        });
+
+        if (conversation) {
+            return res.status(200).json({message: 'المحادثة موجودة بالفعل' });
+        }
+
+        // Create a new conversation if not exists
+        conversation = await Conversation.create({
+            name,
+            members,
+            type,
+            date
+        });
+
+        res.status(200).json({ data: conversation ,message: 'تم انشاء المحادثة بنجاح' });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'حدث خطأ ما' });
     }
 });
 
