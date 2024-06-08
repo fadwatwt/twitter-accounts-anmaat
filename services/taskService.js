@@ -53,7 +53,7 @@ exports.getJob = factory.getOne(Job);
 // @route   POST  /api/v1/jobs
 // @access  Private/Admin
 exports.createJob = asyncHandler(async (req,res) => {
-    const { name, assignTo, description, priority, assignOn, deadline, taskTime } = req.body;
+    const { name, assignTo, description, priority, assignOn, deadline, taskTime,taskCard } = req.body;
 
     const newTask = await Job.create({
         name,
@@ -62,7 +62,8 @@ exports.createJob = asyncHandler(async (req,res) => {
         priority,
         assignOn,
         deadline,
-        taskTime
+        taskTime,
+        taskCard
     });
 
     // 2. تحديث المستخدم لإضافة معرف المهمة الجديدة إلى مصفوفة المهام الخاصة به
@@ -102,8 +103,8 @@ exports.taskDelivery = asyncHandler(async (req, res, next) => {
 exports.taskRating = asyncHandler(async (req, res, next) => {
     try{
         await Job.updateOne(
-            { _id: req.body.task_id },
-            { $set: {rating : req.body.rating} } // Updated fields
+          { _id: req.body.task_id },
+          { $set: { rating: req.body.rating, descriptionRating: req.body.descriptionRating } } // Updated fields
         );
         const task = await Job.findById(req.body.task_id);
         res.status(200).json({ data: task});
@@ -139,6 +140,8 @@ exports.getTasksCards = asyncHandler(async (req, res, next) => {
             cards_arr.push(newcard._doc);
             tasks_arr = [];
         }));
+
+        cards_arr.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         res.status(200).json({ data: cards_arr});
     }catch(e){ 
         console.log(e)

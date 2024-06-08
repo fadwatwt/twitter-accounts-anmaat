@@ -27,7 +27,7 @@ router
   .get(authService.protect, getDepartments)
   .post(
     authService.protect,
-    authService.allowedTo(roles.admin),
+    authService.allowedTo(roles.admin,roles.manager),
     createDepartmentValidator,
     createDepartment
   );

@@ -52,6 +52,9 @@ const taskSchema = new mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: 'taskCard',
     },
+    descriptionRating:{
+      type: String,
+    },
     returnDescription: {
       type: String,
     },
