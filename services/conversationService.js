@@ -5,6 +5,7 @@ const Message = require('../model/messageModel');
 const Task = require('../model/taskModel');
 const multer = require('multer');
 const path = require('path');
+const { io, users,getUserSocket } = require('../server'); // تأكد من أنك تقوم باستيراد io و users بشكل صحيح
 
 exports.createChat = asyncHandler(async (req, res, next) => {
     try {
@@ -28,7 +29,38 @@ exports.createChat = asyncHandler(async (req, res, next) => {
             date
         });
 
-        res.status(200).json({ data: conversation ,message: 'تم انشاء المحادثة بنجاح' });
+
+        res.status(200).json({ data: conversation, message: 'تم انشاء المحادثة بنجاح' });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: 'حدث خطأ ما' });
+    }
+});
+
+
+exports.createMeeting = asyncHandler(async (req, res, next) => {
+    try {
+        const { name, members, type, date } = req.body;
+
+        // Check if a conversation with the same members already exists
+        let conversation = await Conversation.findOne({
+            members: { $all: members, $size: members.length },
+            type: type // Optionally, ensure the type matches too if needed
+        });
+
+        if (conversation) {
+            return res.status(200).json({message: 'الاجتماع موجودة بالفعل' });
+        }
+
+        // Create a new conversation if not exists
+        conversation = await Conversation.create({
+            name,
+            members,
+            type,
+            date
+        });
+
+        res.status(200).json({ data: conversation, message: 'تم انشاء الاجتماع بنجاح' });
     } catch (e) {
         console.log(e);
         res.status(500).json({ message: 'حدث خطأ ما' });

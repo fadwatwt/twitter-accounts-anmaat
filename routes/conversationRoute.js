@@ -18,7 +18,8 @@ const storage = multer.diskStorage({
 const uploadChatMedia = multer({ storage: storage });
 
 const {
-    createChat,getConversations,getConversation,createMessage ,getUnreadMessages,SetReadMessages ,getPerformRate
+    createChat,getConversations,getConversation,createMessage ,getUnreadMessages,SetReadMessages ,getPerformRate,
+  createMeeting
 } = require('../services/conversationService');
 const { uploadmix } = require('../services/twitterService');
 
@@ -31,6 +32,13 @@ router.route('/chat')
         authService.allowedTo(roles.admin , roles.manager),
         createChat
     );
+
+router.route('/meeting')
+  .post(
+    authService.protect,
+    authService.allowedTo(roles.admin , roles.manager),
+    createMeeting
+  );
 
 router.route('/:user_id').get(
     authService.protect,

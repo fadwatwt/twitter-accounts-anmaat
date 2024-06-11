@@ -227,3 +227,5 @@ process.on('unhandledRejection', (err) => {
     process.exit(1);
   });
 });
+
+module.exports = { io, getUserSocket, addUserSocket, deleteUserSocket };
