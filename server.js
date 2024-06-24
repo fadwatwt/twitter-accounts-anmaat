@@ -22,13 +22,6 @@ const dbConnection = require('./config/database');
 
 // Routes
 const mountRoutes = require('./routes');
-//const mountWebRoutes = require("./webRoute");
-///store sessions
-// const store = new MongoDBStore({
-//   uri: process.env.DB_URI,
-//   collection: "sessions",
-// });
-//const { webhookCheckout } = require('./services/orderService');
 
 // Connect with db
 dbConnection();
@@ -50,15 +43,9 @@ const addUserSocket = (user_id, socket_id) => {
   !socketUsers.some((user) => user.user_id === user_id) &&
     socketUsers.push({ user_id, socket_id });
 };
-const getUserSocket = (user_id) => {
-  const user = socketUsers.find((user) => user.user_id === user_id);
-  if (user) {
-    return user;
-  } else {
-    return '';
-  }
-};
-
+function getUserSocket(user_id) {
+  return socketUsers.find(user => user.user_id === user_id) || null;
+}
 const deleteUserSocket = (socket_id) => {
   socketUsers = socketUsers.filter((user) => user.socket_id !== socket_id);
 };
@@ -89,11 +76,13 @@ io.on('connection', (socket) => {
 
   socket.on('sendNotification', (data) => {
     const getSocketId = getUserSocket(data.user_id);
-    const socket_id = getSocketId.socket_id;
-    console.log(socket_id);
-    console.log(data);
-    if (socket_id) {
+    if (getSocketId && getSocketId.socket_id) {
+      const socket_id = getSocketId.socket_id;
+      console.log(socket_id);
+      console.log(data);
       io.to(socket_id).emit('getNotification', { data });
+    } else {
+      console.error('User socket ID not found or user is not connected');
     }
   });
 
@@ -111,75 +100,26 @@ io.on('connection', (socket) => {
       }
     });
   });
+
 });
 
-// Enable other domains to access your application
+
 app.use(cors());
 app.options('*', cors());
 ////parse form fields
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// compress all responses
-// app.use(compression());
 
 /////enable cookies
 app.use(cookieParser());
-////session
-// app.use(
-//   session({
-//     secret: process.env.SESSION_SECRET,
-//     resave: false,
-//     saveUninitialized: false,
-//     store: store,
-//   })
-// );
-/////flash messages
-//app.use(flash());
+;
 // Middlewares
 app.use(express.json());
-// app.use(express.static(path.join(__dirname, 'build')));
-
-///ejs engine configuration
-//app.set("view engine", "ejs");
-//app.set("views", "views");
-
-//app.use(express.static(path.join(__dirname, "public")));
 
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
   console.log(`mode: ${process.env.NODE_ENV}`);
 }
-
-// Limit each IP to 100 requests per `window` (here, per 15 minutes)
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 100,
-//   message:
-//     "Too many requests created from this IP, please try again after an hour",
-// });
-
-// app.use((req, res, next) => {
-//   if (req.session.isLoggedIn && req.session.user) {
-//     res.locals.isAuthenticated = req.session.isLoggedIn;
-//     res.locals.user = req.session.user;
-//   }
-//   next();
-// });
-// Apply the rate limiting middleware to all requests
-// app.use("/api", limiter);
-
-// Middleware to protect against HTTP Parameter Pollution attacks
-// app.use(
-//   hpp({
-//     whitelist: [
-//       "price",
-//       "sold",
-//       "quantity",
-//       "ratingsAverage",
-//       "ratingsQuantity",
-//     ],
-//   })
-// );
 
 // Mount Routes
 mountRoutes(app);
@@ -203,9 +143,6 @@ app.get('/api', (req, res) => {
   res.send('Hello from server, kiro here');
 });
 
-// app.get('/*', (req, res) => {
-//   res.sendFile(path.join(__dirname, 'build', 'index.html'));
-// });
 
 app.all('*', (req, res, next) => {
   next(new ApiError(`Can't find this route: ${req.originalUrl}`, 400));
@@ -228,4 +165,4 @@ process.on('unhandledRejection', (err) => {
   });
 });
 
-module.exports = { io, getUserSocket, addUserSocket, deleteUserSocket };
+module.exports = { getUserSocket, io, addUserSocket, deleteUserSocket };

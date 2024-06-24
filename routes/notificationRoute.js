@@ -23,6 +23,7 @@ router.route('/:user_id').get(
     authService.allowedTo(
         roles.publisherWriter,
         roles.writer,
+        roles.publisher,
         roles.advancePublisher,
         roles.advancePublisherUpload,
         roles.admin,
