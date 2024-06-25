@@ -51,6 +51,8 @@ exports.createMeeting = asyncHandler(async (req, res, next) => {
         //     return res.status(200).json({message: 'الاجتماع موجودة بالفعل' });
         // }
 
+        console.log(date);
+
         // Create a new conversation if not exists
         const conversation = await Conversation.create({
             name,

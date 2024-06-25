@@ -23,6 +23,8 @@ const dbConnection = require('./config/database');
 // Routes
 const mountRoutes = require('./routes');
 
+const cron = require('node-cron');
+
 // Connect with db
 dbConnection();
 
@@ -58,6 +60,7 @@ const io = require('socket.io')(server, {
 });
 
 const { getConversationUsers } = require('./services/conversationService');
+const Conversation = require('./model/conversationModel');
 
 io.on('connection', (socket) => {
   console.log('A user connected');
@@ -75,6 +78,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('sendNotification', (data) => {
+    console.log("start sendNotification");
     const getSocketId = getUserSocket(data.user_id);
     if (getSocketId && getSocketId.socket_id) {
       const socket_id = getSocketId.socket_id;
@@ -103,6 +107,55 @@ io.on('connection', (socket) => {
 
 });
 
+cron.schedule('* * * * *', async () => {
+  try {
+    console.log("Starting cron job...");
+
+    // ابحث عن جميع الاجتماعات من نوع 'group'
+    const meetings = await Conversation.find({ type: 'group' });
+
+    // التاريخ والوقت الحالي
+    const now = new Date();
+
+    // فلترة الاجتماعات القادمة خلال 5 دقائق
+    const upcomingMeetings = meetings.filter(meeting => {
+      const timeDiff = meeting.date - now;
+      return timeDiff > 0 && timeDiff <= 5 * 60 * 1000; // خلال 5 دقائق
+    });
+
+    // لوج وإرسال التذكيرات لكل عضو في كل اجتماع قادم
+    for (const meeting of upcomingMeetings) {
+      for (const member of meeting.members) {
+        try {
+          // إنشاء إشعار في قاعدة البيانات
+          const notification = new Notification({
+            user_id: member,
+            type: 'alert',
+            notification: `تذكير بموعد الاجتماع سيكون متاحا بعد 5 دقائق ${meeting.name}`,
+          });
+
+          await notification.save();
+
+          // إرسال الإشعار عبر WebSocket
+          io.emit('sendNotification', {
+            user_id: member,
+            type: 'alert',
+            notification: `تذكير بموعد الاجتماع سيكون متاحا بعد 5 دقائق ${meeting.name}`,
+            createdAt: new Date(),
+          });
+
+          console.log(`Notification sent to user ${member}`);
+        } catch (error) {
+          console.error(`Error creating notification for user ${member}:`, error);
+        }
+      }
+    }
+
+    console.log("Cron job completed.");
+  } catch (error) {
+    console.error('Error checking meetings:', error);
+  }
+});
 
 app.use(cors());
 app.options('*', cors());
