@@ -65,6 +65,25 @@ const userSchema = new mongoose.Schema(
     socialType: {
       type: Array,
     },
+
+    rating: {
+      type: Number,
+      required:true,
+      default:0,
+      min: 0,
+      max: 100 // القيمة يجب أن تكون بين 0 و 100
+    },
+    totalTasksRated:{
+      type:Number,
+      required:true,
+      default:0,
+    },
+    weekEnd:{
+      type:Number,
+      default:5,
+      min:0,
+      max:6
+    }
   },
   { timestamps: true }
 );

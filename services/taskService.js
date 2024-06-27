@@ -3,6 +3,7 @@ const Job = require('../model/taskModel');
 const User = require('../model/userModel');
 const TaskCard = require('../model/taskCardModel');
 const asyncHandler = require('express-async-handler');
+const { updateManagerRatingAutomatically } = require('./userService');
 
 
 // @desc    Get list of jobs
@@ -101,12 +102,13 @@ exports.taskDelivery = asyncHandler(async (req, res, next) => {
 })
 
 exports.taskRating = asyncHandler(async (req, res, next) => {
+    const {rating,descriptionRating,mangerRating} = req.body
     try{
-        await Job.updateOne(
+       const task = await Job.findOneAndUpdate(
           { _id: req.body.task_id },
-          { $set: { rating: req.body.rating, descriptionRating: req.body.descriptionRating } } // Updated fields
-        );
-        const task = await Job.findById(req.body.task_id);
+          { $set: { ratingInfo: {rating:rating,descriptionRating:descriptionRating,mangerRating:mangerRating} } } // Updated fields
+        ,{new:true});
+        await updateManagerRatingAutomatically(task.deliveryTime, task.ratingInfo.ratingDate, mangerRating)
         res.status(200).json({ data: task});
     }catch(e){ 
         console.log(e)
@@ -173,12 +175,13 @@ exports.getTasksEmployee = asyncHandler(async (req, res, next) => {
 })
 
 exports.returnTasksToEmployee = asyncHandler(async (req, res, next) => {
+    const {returnDescription,mangerRating,taskTime,id} = req.body
     try{
-        console.log(req.body)
-        const task =  await Job.updateOne(
-            { _id: req.body.id },
-            { $set: {isDone : false , returnDescription : req.body.returnDescription , taskTime : req.body.taskTime} } // Updated fields
-        );
+        const task =  await Job.findOneAndUpdate(
+            { _id: id },
+            { $set: {isDone : false , ratingInfo : { returnDescription, taskTime: taskTime ,mangerRating:mangerRating}} }, // Updated fields
+        { new: true });
+        await updateManagerRatingAutomatically(task.deliveryTime, task.ratingInfo.ratingDate, mangerRating)
         res.status(200).json({data : task});
     }catch(e){ 
         console.log(e)

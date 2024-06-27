@@ -1,5 +1,29 @@
 const mongoose = require('mongoose');
 
+// تعريف الكائن الداخلي ratingInfo
+const ratingInfoSchema = new mongoose.Schema({
+  rating: {
+    type: Number,
+    min:0,
+    max:5,
+  },
+  mangerRating: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'user',
+    required: [true, 'المدير مطلوب'],
+  },
+  ratingDate: {
+    type: Date,
+    required: true, // الحقل ratingDate مطلوب
+    default: Date.now // القيمة الافتراضية هي تاريخ اليوم
+  },
+  descriptionRating:{
+    type: String,
+  },
+  returnDescription: {
+    type: String,
+  },
+}, { _id: false }); // عدم إنشاء معرف (ID) منفصل للكائن الداخلي
 const taskSchema = new mongoose.Schema(
   {
     name: {
@@ -41,9 +65,6 @@ const taskSchema = new mongoose.Schema(
     deliveryTime: {
       type: Date,
     },
-    rating: {
-      type: Number,
-    },
     taskTime: {
       type: String,
       required: [true, 'وفت المهمة مطلوب'],
@@ -52,11 +73,9 @@ const taskSchema = new mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: 'taskCard',
     },
-    descriptionRating:{
-      type: String,
-    },
-    returnDescription: {
-      type: String,
+
+    ratingInfo: {
+      type: ratingInfoSchema,
     },
   },
 
