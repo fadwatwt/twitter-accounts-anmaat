@@ -5,9 +5,12 @@ const { HttpProxyAgent } = require('http-proxy-agent');
 const url = require('url');
 const querystring = require('querystring');
 //const { HttpProxyAgent } = require("hpagent");
-const { uploadMedia } = require('./uploadMedia');
+const { uploadMedia, uploadMediaForPublisher } = require('./uploadMedia');
 
 const { AccountStatus } = require('../model/AccountStatusModel');
+const asyncHandler = require('express-async-handler');
+const { v4: uuidv4 } = require('uuid');
+const sharp = require('sharp');
 
 function extractUsernameFromTwitterUrl(twitterUrl) {
   // Parse the URL
@@ -838,6 +841,7 @@ exports.TweetView = async (account, tweet) => {
   //console.log(JSON.stringify(result))
   return result;
 };
+
 exports.ShowTweet = async (account, tweet) => {
   let browser;
   let username;
@@ -969,4 +973,5 @@ let checklocked = async (account) => {
 
   //   return { locked: true, status: AccountStatus.Locked };
   // }
+
 };

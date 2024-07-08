@@ -1,9 +1,13 @@
 const { parse } = require('csv-parse');
+const fs = require('fs').promises;
+const { v4: uuidv4 } = require('uuid');
+const sharp = require('sharp');
 const asyncHandler = require('express-async-handler');
 const Account = require('../model/accountModel');
 const ApiError = require('../utils/apiError');
 const { login } = require('../twitterMethod/check');
 const { resolveCaptcha } = require('../twitterMethod/resolveCaptcha');
+const TweetNotPublish = require('../model/tweetNotPublishModel');
 const {
   activateAnalytics,
   getAnalytics,
@@ -37,6 +41,16 @@ const {
   TweetView,
   ShowTweet,
 } = require('../twitterMethod/twitterMethods');
+const mongoose = require('mongoose');
+const { getAll } = require('./handlersFactory');
+const factory = require('./handlersFactory');
+const Job = require('../model/taskModel');
+const { uploadMedia } = require('../twitterMethod/uploadMedia');
+const { get } = require('axios');
+const { join } = require('node:path');
+const { promisify } = require('node:util');
+
+const readFile = promisify(fs.readFile);
 // @desc    analytics
 // @route   POST /api/v1/method/analytics
 // @access  Private
@@ -91,6 +105,20 @@ exports.analytics = asyncHandler(async (req, res, next) => {
   }
   return res.status(200).json(response);
 });
+
+
+const fetchImageFromUrl = asyncHandler(async (url) => {
+  try {
+    const response = await get(url, {
+      responseType: 'arraybuffer' // Important: Set the response type to arraybuffer to get binary data
+    });
+
+    return response.data; // Return the raw binary data (buffer)
+  } catch (error) {
+    console.error('Error fetching image from URL:', error.message);
+    throw error; // Throw the error for handling in the calling function
+  }
+})
 exports.uploadimageFile = uploadMixOfFiles([
   {
     name: 'image',
@@ -569,6 +597,244 @@ exports.tweetSetOfAccounts = asyncHandler(async (req, res, next) => {
   console.log('ALll FINE');
   console.log('ALll FINE');
   console.log('ALll FINE');
+});
+
+
+exports.tweetSetOfAccountsForNotTweet = asyncHandler(async (req, res, next) => {
+  let allerrors = [];
+  let tweetsObject = [];
+
+  console.log("Enter tweetSetOfAccountsForNotTweet part 1");
+
+  if (!req?.files?.csvFile || !req?.files?.csvFile[0]) {
+    return next(new ApiError(`الرجاء قم بتحميل الملف`, 400));
+  }
+
+  const accounts = req.body.accounts;
+  const csvBuffer = req.files.csvFile[0].buffer;
+  const tweets = [];
+
+  let images = req.body.images || [];
+  let imagesBuffer = req.files.images || [];
+
+  const csvString = csvBuffer.toString('utf-8');
+  const tweetArray = csvString.split('/').map(tweet => tweet.trim());
+
+  tweetArray.forEach((tweet) => {
+    tweets.push(tweet);
+  });
+
+  for (let i = 0; i < accounts.length; i++) {
+    let errors = [];
+    let imgBuffer = [imagesBuffer[0]];
+    const doc =await Account.findOne({ name: accounts[i] });
+
+      console.log("Enter tweetSetOfAccountsForNotTweet part 2",req.body.employeeId);
+
+      let tweetObject = await TweetNotPublish.create({
+        employee: req.body.employeeId,
+        account: doc._id,
+        schedule: req.body.schedule || null,
+      });
+
+      let content = {text:"",types:"",url:"",media:[]};
+
+      if (images[i]) {
+        content.url = images[i]; // تحديث url إلى الصورة المتوفرة
+        content.types = [...content.types, 'image']; // إضافة 'image' إلى مصفوفة الأنواع
+        content.media=imgBuffer
+      }
+
+      if (tweets[i]) {
+        content.text = tweets[i]; // تحديث text إلى النص المتوفر
+        content.types = [...content.types, 'text']; // إضافة 'text' إلى مصفوفة الأنواع
+      }
+
+      tweetObject = await TweetNotPublish.findByIdAndUpdate(tweetObject._id, { $set: { content: content } }, { new: true });
+
+      tweetsObject.push(tweetObject);
+
+    if (errors.length > 0) {
+      allerrors.push({ account: accounts[i], errors: errors });
+    }
+  }
+
+  if (allerrors.length > 0) {
+    res.status(400).json({ errors: allerrors });
+  } else {
+    res.status(200).json({ status: 'ok', tweets: tweetsObject });
+  }
+});
+
+exports.tweetsSetOfAccountsForPublisher = asyncHandler(async (req, res, next) => {
+  const id = req.params.id;
+  const errors = [];
+  const allErrors = [];
+
+  try {
+    const tweet = await TweetNotPublish.findById(id);
+    const doc = await Account.findById(tweet.account._id)
+
+    if (doc && doc.AccountStatus == AccountStatus.NetworkError) {
+      errors.push('الموقع غير متاح');
+      console.error('the site is unavailable');
+    } else if (doc.AccountBasicInfo.Cookie) {
+      const agent =
+        doc.agent === 'mobile'
+          ? doc.AccountBasicInfo?.MobileUserAgent
+          : doc.AccountBasicInfo?.WebUserAgent;
+
+    if (!tweet) {
+      return res.status(404).json({ message: "هذه التغريدة غير موجودة" });
+    }
+    console.log(tweet);
+
+    const { schedule, content } = tweet;
+    const text = content.text;
+    const media = content.media
+
+      const c = {
+        username: doc.name,
+        Proxy: doc.AccountBasicInfo.Location,
+        userAgent: agent,
+        cookie: doc.AccountBasicInfo.Cookie,
+      };
+
+    const twt = await tweetText1(c, text, media, schedule);
+    console.log('🚀 ~ file: twitterService.js:523 ~ exports.tweetSetOfAccounts=asyncHandler ~ twt:', twt);
+
+    if (twt.error?.errors) {
+      errors.push(twt.error.errors[0].message);
+    } else if (twt.error) {
+      errors.push(twt.error);
+    } else if (twt.errors) {
+      errors.push(twt.errors[0].message);
+    }
+
+    if (errors.length > 0) {
+      allErrors.push({ account: tweet.account, errors: errors });
+    }
+
+    if (allErrors.length > 0) {
+      return res.status(400).json({ allErrors });
+    } else {
+      const tweet = await TweetNotPublish.findByIdAndUpdate(
+        id,
+        { $set: { state: true} },
+        { new: true }
+      );
+      return res.status(200).json({ message: "تم نشر التغريدة بنجاح", tweet:tweet});
+    }
+    } else {
+      errors.push('الرجاء تسجيل الدخول');
+    }
+  } catch (error) {
+    console.error("Error in tweetsSetOfAccountsForPublisher:", error);
+    return res.status(500).json({ message: "خطأ في الخادم الداخلي" });
+  }
+
+});
+
+exports.getTweetsNotPublish = getAll(TweetNotPublish)
+
+exports.getTweetsForPublisher = asyncHandler(async (req, res, next) => {
+  try {
+    const employeeId = req.params.id;
+
+
+    if (!employeeId) {
+      return res.status(400).json({ message: 'معرف الموظف مطلوب' });
+    }
+
+    const tweets = await TweetNotPublish.find({ employee: employeeId });
+
+    if (!tweets || tweets.length === 0) {
+      return res.status(404).json({ message: "لا توجد تغريدات غير منشورة لهذا الموظف" });
+    }
+
+    return res.status(200).json(tweets);
+  } catch (e) {
+    return res.status(500).json({ message: "خطأ في الخادم الداخلي", error: error.message });
+  }
+});
+
+
+
+
+// exports.tweetSetOfAccountsForNotTweet = asyncHandler( async (req, res, next) => {
+//   let allerrors = [];
+//
+//   if (!req?.files?.csvFile || !req?.files?.csvFile[0]) {
+//     return next(new ApiError(`الرجاء قم بتحميل الملف`, 400));
+//   }
+//   console.log('req.body');
+//   console.log(req.body);
+//   console.log('req.body');
+//   const accounts = req.body.accounts;
+//   const content = req.files.csvFile[0].buffer.toString();
+//
+//   let images = req.files.images || [];
+//
+//   let tweetTxt = content.split('/');
+//
+//   tweetTxt = tweetTxt.join('\n');
+//
+//   console.log(tweetTxt);
+//
+//   let tweets = []
+//
+//   for (let i = 0; i < accounts.length; i++) {
+//     let text = tweetTxt[i]
+//     let image = images[i]
+//     let content = {type:[],text:"",url:""}
+//
+//     let tweet = await  TweetNotPublish.create({
+//       account: account[i],
+//     });
+//
+//     if(image){
+//       content.type.push("image")
+//       content.url = image
+//     }
+//
+//     if (text){
+//       content.type.push("text")
+//       content.text = text
+//     }
+//     tweet = await TweetNotPublish.findByIdAndUpdate(tweet._id,{ $set:{content:content }},{new:true})
+//
+//     tweets.push(tweet)
+//   }
+//
+//   res.status(200).json();
+// })
+
+// Middleware لتحجيم عدة صور
+exports.resizeImages = asyncHandler(async (req, res, next) => {
+  // التأكد من وجود ملفات متعددة
+  if (!req.files.images || req.files.images.length === 0) {
+    return next(); // إذا لم يتم تحميل أي صورة، تابع إلى الوسيط التالي
+  }
+
+  // عملية تحجيم وحفظ كل صورة
+  req.body.images = []; // مصفوفة لتخزين مسارات الصور المحفوظة
+
+  await Promise.all(
+    req.files.images.map(async (file) => {
+      const filename = `tweet-${uuidv4()}-${Date.now()}.jpeg`;
+
+      await sharp(file.buffer)
+        .resize(600, 600)
+        .toFormat('jpeg')
+        .jpeg({ quality: 95 })
+        .toFile(`uploads/images/${filename}`);
+
+      // إضافة مسار الصورة المحفوظة إلى قائمة الصور
+      req.body.images.push(`images/${filename}`);
+    })
+  );
+
+  next(); // استدعاء الوسيط التالي بعد إكمال عمليات تحجيم وحفظ الصور
 });
 
 // @desc    deleteTweet

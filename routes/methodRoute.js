@@ -35,7 +35,8 @@ const {
   replyService,
   uploadtxtReplyFile,
   captcha,
-  viewTweet,
+  viewTweet, tweetSetOfAccountsForNotTweet, resizeImages, tweetsSetOfAccountsForPublisher, getTweetsNotPublish,
+  getTweetsForPublisher,
 } = require('../services/twitterService');
 
 const authService = require('../services/authService');
@@ -106,6 +107,55 @@ router
     updateAccountsValidator,
     tweetSetOfAccounts
   );
+
+router
+  .route('/tweetAccountsPublisher')
+  .post(
+    authService.protect,
+    authService.allowedTo(
+      roles.publisher,
+    ),
+    uploadmix,
+    resizeImages,
+    updateAccountsValidator,
+    tweetSetOfAccountsForNotTweet
+  );
+
+router
+  .route('/tweetsForPublisher/:id')
+  .post(
+    authService.protect,
+    authService.allowedTo(
+      roles.admin,
+      roles.manager
+    ),
+    tweetsSetOfAccountsForPublisher
+  );
+
+router
+  .route('/tweetsNotPublish')
+  .get(
+    authService.protect,
+    authService.allowedTo(
+      roles.admin,
+      roles.manager,
+    ),
+    getTweetsNotPublish
+  );
+
+router
+  .route('/tweetsNotPublish/:id')
+  .get(
+    authService.protect,
+    authService.allowedTo(
+      roles.admin,
+      roles.manager,
+      roles.publisher,
+    ),
+    getTweetsForPublisher
+  );
+
+
 router
   .route('/tweet/delete')
   .post(

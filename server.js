@@ -59,6 +59,11 @@ const io = require('socket.io')(server, {
   },
 });
 
+app.use(
+  '/uploads/images',
+  express.static(path.join(__dirname, 'uploads/images'))
+);
+
 const { getConversationUsers } = require('./services/conversationService');
 const Conversation = require('./model/conversationModel');
 

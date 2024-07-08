@@ -17,6 +17,7 @@ router.route('/').get(
     authService.allowedTo(
         roles.publisherWriter,
         roles.writer,
+        roles.publisher,
         roles.advancePublisher,
         roles.advancePublisherUpload,
         roles.manager,
