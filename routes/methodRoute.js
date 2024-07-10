@@ -122,7 +122,7 @@ router
   );
 
 router
-  .route('/tweetsForPublisher/:id')
+  .route('/tweetsForPublisher')
   .post(
     authService.protect,
     authService.allowedTo(

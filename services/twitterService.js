@@ -667,13 +667,16 @@ exports.tweetSetOfAccountsForNotTweet = asyncHandler(async (req, res, next) => {
 });
 
 exports.tweetsSetOfAccountsForPublisher = asyncHandler(async (req, res, next) => {
-  const id = req.params.id;
+  const ids = req.body.ids;
   const errors = [];
   const allErrors = [];
-
+  let tweets = []
+  console.log(ids);
   try {
-    const tweet = await TweetNotPublish.findById(id);
+    for (let i = 0; i < ids.length; i++){
+    const tweet = await TweetNotPublish.findById(ids[i]);
     const doc = await Account.findById(tweet.account._id)
+      tweets.push(tweet)
 
     if (doc && doc.AccountStatus == AccountStatus.NetworkError) {
       errors.push('الموقع غير متاح');
@@ -684,14 +687,14 @@ exports.tweetsSetOfAccountsForPublisher = asyncHandler(async (req, res, next) =>
           ? doc.AccountBasicInfo?.MobileUserAgent
           : doc.AccountBasicInfo?.WebUserAgent;
 
-    if (!tweet) {
-      return res.status(404).json({ message: "هذه التغريدة غير موجودة" });
-    }
-    console.log(tweet);
+      if (!tweet) {
+        return res.status(404).json({ message: "هذه التغريدة غير موجودة" });
+      }
+      console.log(tweet);
 
-    const { schedule, content } = tweet;
-    const text = content.text;
-    const media = content.media
+      const { schedule, content } = tweet;
+      const text = content.text;
+      const media = content.media
 
       const c = {
         username: doc.name,
@@ -700,33 +703,34 @@ exports.tweetsSetOfAccountsForPublisher = asyncHandler(async (req, res, next) =>
         cookie: doc.AccountBasicInfo.Cookie,
       };
 
-    const twt = await tweetText1(c, text, media, schedule);
-    console.log('🚀 ~ file: twitterService.js:523 ~ exports.tweetSetOfAccounts=asyncHandler ~ twt:', twt);
+      const twt = await tweetText1(c, text, media, schedule);
+      console.log('🚀 ~ file: twitterService.js:523 ~ exports.tweetSetOfAccounts=asyncHandler ~ twt:', twt);
 
-    if (twt.error?.errors) {
-      errors.push(twt.error.errors[0].message);
-    } else if (twt.error) {
-      errors.push(twt.error);
-    } else if (twt.errors) {
-      errors.push(twt.errors[0].message);
+      if (twt.error?.errors) {
+        errors.push(twt.error.errors[0].message);
+      } else if (twt.error) {
+        errors.push(twt.error);
+      } else if (twt.errors) {
+        errors.push(twt.errors[0].message);
+      }
+
+      if (errors.length > 0) {
+        allErrors.push({ account: tweet.account, errors: errors });
+      }
+
+      const tweet2 = await TweetNotPublish.findByIdAndUpdate(
+        ids[i],
+        { $set: { state: true } },
+        { new: true }
+      );
+    } else {
+      errors.push('الرجاء تسجيل الدخول');
     }
-
-    if (errors.length > 0) {
-      allErrors.push({ account: tweet.account, errors: errors });
     }
-
     if (allErrors.length > 0) {
       return res.status(400).json({ allErrors });
     } else {
-      const tweet = await TweetNotPublish.findByIdAndUpdate(
-        id,
-        { $set: { state: true} },
-        { new: true }
-      );
-      return res.status(200).json({ message: "تم نشر التغريدة بنجاح", tweet:tweet});
-    }
-    } else {
-      errors.push('الرجاء تسجيل الدخول');
+      return res.status(200).json({ message: "تم نشر التغريدات بنجاح",tweets});
     }
   } catch (error) {
     console.error("Error in tweetsSetOfAccountsForPublisher:", error);
