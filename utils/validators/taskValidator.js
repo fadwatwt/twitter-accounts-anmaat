@@ -36,12 +36,12 @@ exports.createJobValidator = [
   check('deadline')
     .notEmpty()
     .withMessage('تاريخ نهاية المهمة')
-    .isDate()
+    .isISO8601()
     .withMessage('تنسيق التاريخ خاطئ'),
   check('assignOn')
     .notEmpty()
     .withMessage('تاريخ بداية المهمة مطلوب')
-    .isDate()
+    .isISO8601()
     .withMessage('تنسيق التاريخ خاطئ'),
   validatorMiddleware,
 ];
