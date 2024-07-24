@@ -8,6 +8,7 @@ const ApiError = require('../utils/apiError');
 const { uploadSingleFile } = require('../middleware/uploadFilesMiddleware');
 const createToken = require('../utils/createToken');
 const User = require('../model/userModel');
+const { Types } = require('mongoose');
 
 // Upload single image
 exports.uploadUserImage = uploadSingleFile('profileImg');
@@ -68,7 +69,40 @@ exports.getUser = factory.getOne(User);
 // @desc    Create user
 // @route   POST  /api/v1/users
 // @access  Private/Admin
-exports.createUser = factory.createOne(User);
+exports.createUser = asyncHandler(async (req, res, next) => {
+  try {
+    const { name, slug, phone, email, profileImg, type, holidays, role,
+      weekEnd, password, passwordConfirm, Category, Department } = req.body;
+
+    const categoryIds = Category.map((id) => {
+       return new Types.ObjectId(id)});
+
+    console.log(categoryIds);
+
+    if (password !== passwordConfirm) {
+      return res.status(400).json({ error: 'Passwords do not match' });
+    }
+
+      const document = await User.create({
+      name: name,
+      slug: slug,
+      phone: phone,
+      password:password,
+      email: email,
+      profileImg:profileImg,
+      type: type,
+      holidays: holidays,
+      role: role,
+      weekEnd:weekEnd,
+      Category: categoryIds,
+      Department: Department
+    });
+
+    res.status(200).json({ data: document });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // @desc    Update specific user
 // @route   PUT /api/v1/users/:id

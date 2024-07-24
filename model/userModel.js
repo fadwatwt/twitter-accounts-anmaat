@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, 'البريد الالكتروني'],
+      required: [true, 'البريد الالكتروني مطلوب'],
       unique: true,
       lowercase: true,
     },
@@ -37,21 +37,21 @@ const userSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['بالمهام' , 'فريلانسر', 'دوام بالساعة'],
+      enum: ['بالمهام', 'فريلانسر', 'دوام بالساعة'],
       default: 'بالمهام',
     },
-    holidays: { 
+    holidays: {
       type: Number,
-      default : 0,
+      default: 0,
     },
     isHashTagAllow: {
       type: Boolean,
       default: false,
     },
-    Category: {
-      type: mongoose.Schema.ObjectId,
+    Category: [{
+      type: mongoose.Schema.Types.ObjectId,
       ref: 'Category',
-    },
+    }],
     Department: {
       type: mongoose.Schema.ObjectId,
       ref: 'Department',
@@ -61,29 +61,26 @@ const userSchema = new mongoose.Schema(
         type: mongoose.Schema.ObjectId,
         ref: 'Task',
       }
-      ],
-    socialType: {
-      type: Array,
-    },
-
+    ],
+    socialType: [String],  // تحديد نوع العناصر في المصفوفة
     rating: {
       type: Number,
-      required:true,
-      default:0,
+      required: true,
+      default: 0,
       min: 0,
-      max: 100 // القيمة يجب أن تكون بين 0 و 100
+      max: 100,
     },
-    totalTasksRated:{
-      type:Number,
-      required:true,
-      default:0,
+    totalTasksRated: {
+      type: Number,
+      required: true,
+      default: 0,
     },
-    weekEnd:{
-      type:Number,
-      default:5,
-      min:0,
-      max:6
-    }
+    weekEnd: {
+      type: Number,
+      default: 5,
+      min: 0,
+      max: 6,
+    },
   },
   { timestamps: true }
 );
@@ -94,13 +91,14 @@ userSchema.pre('save', async function (next) {
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
+
 userSchema.pre(/^find/, function (next) {
   if (this.options._recursed) {
     return next();
   }
   this.populate({
     path: 'Category',
-    select: 'name',
+    select: ['name', '_id'],
     options: { _recursed: true },
   });
   this.populate({
@@ -111,9 +109,6 @@ userSchema.pre(/^find/, function (next) {
   next();
 });
 
-// Object.assign(userSchema.statics, {
-//   roles,
-// });
 const User = mongoose.model('user', userSchema);
 
 module.exports = User;
