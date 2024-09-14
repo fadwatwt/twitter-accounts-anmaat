@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
+const Account = require('./accountModel'); // تأكد من مسار موديل الحسابات
 
 // 1- Create Schema
 const categorySchema = new mongoose.Schema(
@@ -29,12 +30,42 @@ const categorySchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true }, // إظهار الحقول الافتراضية في JSON
+    toObject: { virtuals: true } // إظهار الحقول الافتراضية عند التحويل إلى كائن
+  }
 );
 categorySchema.pre('save', async function (next) {
   this.slug = slugify(this.name);
   next();
 });
+
+categorySchema.methods.getAccountCount = async function () {
+  return Account.countDocuments({ Category: this._id });
+};
+
+// Add a virtual field for accountCount
+categorySchema.virtual('accountCount', {
+  ref: 'account', // The model to use
+  localField: '_id', // Find accounts where `localField` matches `foreignField`
+  foreignField: 'Category', // The field in the Account model
+  count: true, // Only return the count, not the documents
+});
+
+categorySchema.pre(/^find/, function (next) {
+  if (this.options._recursed) {
+    return next();
+  }
+  this.populate({
+    path: 'parent',
+    select: ['_id','name'],
+    options: { _recursed: true },
+  });
+  next();
+});
+
+
 // 2- Create model
 const InstaAccountCategoryModel = mongoose.model('InstaAccountCategory', categorySchema);
 

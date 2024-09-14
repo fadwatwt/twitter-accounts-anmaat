@@ -65,13 +65,14 @@ exports.getOne = (Model, populationOpt) =>
     res.status(200).json({ data: document });
   });
 
-exports.getAll = (Model, modelName = '') =>
+// factory.js
+exports.getAll = (Model, modelName = '', populateFields = []) =>
   asyncHandler(async (req, res) => {
     let filter = {};
     if (req.filterObj) {
       filter = req.filterObj;
     }
-    // Build query
+
     const documentsCounts = await Model.countDocuments();
 
     const apiFeatures = new ApiFeatures(Model.find(filter), req.query)
@@ -84,22 +85,19 @@ exports.getAll = (Model, modelName = '') =>
 
     // Execute query
     const { mongooseQuery, paginationResult } = apiFeatures;
-    const documents = await mongooseQuery;
-    if (modelName === 'Departments') {
-      for (let i = 0; i < documents.length; i += 1) {
-        const doc = documents[i].toObject();
-        const s = await User.countDocuments({
-          Department: doc._id,
-        });
-        doc.totalEmp = s;
-        documents[i] = doc;
-        // console.log(doc);
-      }
+
+    // Apply population if provided
+    if (populateFields.length > 0) {
+      populateFields.forEach(field => {
+        mongooseQuery.populate(field);
+      });
     }
-    res
-      .status(200)
-      .json({ results: documents.length, paginationResult, data: documents });
+
+    const documents = await mongooseQuery;
+
+    res.status(200).json({ results: documents.length, paginationResult, data: documents });
   });
+
 // exports.getAll = (Model, modelName = '') =>
 //   asyncHandler(async (req, res) => {
 //     let filter = {};

@@ -17,15 +17,17 @@ const { login } = require('./authService');
 // @desc    Get list of AccountCategories
 // @route   GET /api/v1/accountcategories
 // @access  Private
-exports.getAccountCategories = factory.getAll(Category, 'accountcategories');
+exports.getAccountCategories = factory.getAll(Category, 'accountcategories', ['accountCount']);
 
-exports.getInstaAccountCategories = factory.getAll(InstaCategory, 'accountcategories');
+exports.getInstaAccountCategories = factory.getAll(InstaCategory, 'accountcategories', ['accountCount']);
 // @desc    Get specific AccountCategory by id
 // @route   GET /api/v1/accountcategories/:id
 // @access  Private
 exports.getAccountCategory = factory.getOne(Category);
 
 exports.getInstaAccountCategory = factory.getOne(InstaCategory);
+exports.deleteCategoryAccountSet = factory.deleteMany(Category);
+exports.deleteCategoryInstaAccountSet = factory.deleteMany(InstaCategory);
 
 // @desc    Create accountcategory
 // @route   POST  /api/v1/accountcategories

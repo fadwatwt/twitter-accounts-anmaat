@@ -91,7 +91,7 @@ const taskSchema = new mongoose.Schema(
 taskSchema.pre(/^find/, function (next) {
   this.populate({
     path: 'assignTo',
-    select: 'name',
+    select: ['name',"Department"],
   });
 
   next();

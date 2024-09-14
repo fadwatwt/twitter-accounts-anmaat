@@ -25,10 +25,12 @@ const {
   updateInstaAccountCategory,
   deleteInstaAccountCategory,
   moveInstaCategory,
-  instaDescendants
+  instaDescendants, deleteCategoryAccountSet, deleteCategoryInstaAccountSet
 } = require('../services/accountCategoryService');
 
 const authService = require('../services/authService');
+const { categoryGroupDeleteValidator } = require('../utils/validators/categoryValidator');
+const { deleteCategorySet } = require('../services/categoryService');
 
 const router = express.Router();
 router
@@ -105,6 +107,23 @@ router
     authService.allowedTo(roles.admin, roles.advancePublisherUpload),
     deleteCategoryValidator,
     deleteInstaAccountCategory
+  );
+
+router
+  .route('/someDelete')
+  .post(
+    authService.protect,
+    authService.allowedTo(roles.admin,roles.manager),
+    categoryGroupDeleteValidator,
+    deleteCategoryAccountSet
+  );
+router
+  .route('/insta/someDelete')
+  .post(
+    authService.protect,
+    authService.allowedTo(roles.admin,roles.manager),
+    categoryGroupDeleteValidator,
+    deleteCategoryInstaAccountSet
   );
 
 
