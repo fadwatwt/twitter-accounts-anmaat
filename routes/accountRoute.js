@@ -29,7 +29,7 @@ const {
   check,
   accountData,
   deleteAccountSet,
-  deleteInstaAccountSet,
+  deleteInstaAccountSet, newUpadteAccount,
 } = require('../services/accountService');
 
 const authService = require('../services/authService');
@@ -45,7 +45,7 @@ router.route('/insta').get(authService.protect, getAccountsForInsta);
 router
   .route('/:id')
   .get(authService.protect, getAccountValidator, getAccount)
-  .put(authService.protect, updateAccountValidator, updateAccount)
+  .put(authService.protect, updateAccountValidator, newUpadteAccount)
   .delete(authService.protect, deleteAccountValidator, deleteAccount);
 
 router

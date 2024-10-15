@@ -26,3 +26,11 @@ exports.WriteFile = asyncHandler(async (req, res, next) => {
     res.status(203).json({ data: 'تم تحديث الملف بنجاح' });
   });
 });
+
+exports.deleteFile = asyncHandler(async (req,res) => {
+  const filePath = path.join(__dirname, '..', 'uploads', req.body.file);
+  await fs.promises.access(filePath);
+  await fs.promises.unlink(filePath);
+
+  res.status(200).json({ data: 'تم حذف الملف بنجاح' });
+})

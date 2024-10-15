@@ -21,12 +21,13 @@ const {
   createInstaCategory,
   updateInstaCategory,
   deleteInstaCategory,
-  deleteInstaCategorySet,
+  deleteInstaCategorySet, uploadFiles, deleteFileCategory,
 } = require('../services/categoryService');
 
 const authService = require('../services/authService');
 
 const router = express.Router();
+// createCategoryValidator,
 
 router
   .route('/')
@@ -34,7 +35,7 @@ router
   .post(
     authService.protect,
     authService.allowedTo(roles.admin, roles.advancePublisherUpload ,roles.manager),
-    createCategoryValidator,
+    uploadFiles,
     createCategory
   );
 
@@ -51,7 +52,7 @@ router
   .put(
     authService.protect,
     authService.allowedTo(roles.admin, roles.advancePublisherUpload,roles.manager),
-    updateCategoryValidator,
+    updateCategoryValidator,uploadFiles,
     updateCategory
   )
   .delete(
@@ -92,4 +93,10 @@ router
     categoryGroupDeleteValidator,
     deleteInstaCategorySet
   );
+
+  router.route('/delete/file').post(
+    authService.protect,
+    authService.allowedTo(roles.admin, roles.advancePublisherUpload,roles.manager),
+    deleteFileCategory
+  )
 module.exports = router;

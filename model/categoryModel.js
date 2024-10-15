@@ -20,6 +20,12 @@ const categorySchema = new mongoose.Schema(
       ref: 'user',
       required: [true, 'المشرف مطلوب'],
     },
+    files: [
+      {
+        type: String,
+        required: false,
+      },
+    ],
   },
   { timestamps: true }
 );

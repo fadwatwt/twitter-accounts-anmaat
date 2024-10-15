@@ -31,7 +31,7 @@ function extractUsernameFromTwitterUrl(twitterUrl) {
   // If there are query parameters, check for 's' parameter and extract username
   if (parsedUrl.query) {
     const queryParams = querystring.parse(parsedUrl.query);
-    console.log(queryParams.s);
+    // console.log(queryParams.s);
     if (queryParams.s && !username) {
       return queryParams.s;
     }
@@ -49,10 +49,9 @@ exports.requestAxios = async (
 ) => {
   let result = {};
   const cookie = account.cookie || '';
-
   const splitCookieHeaders = setCookie.splitCookiesString(cookie);
   const cookies = setCookie.parse(splitCookieHeaders);
-  //console.log(cookies);
+  // console.log(cookies);
   const guestToken = cookies[0]['guest_id'] || '';
   const csrf = cookies[0]['ct0'] || '';
   const authType = cookies[0]['auth_token'] ? 'OAuth2Session' : '';
@@ -100,9 +99,9 @@ exports.requestAxios = async (
   //console.log(axiosConfig);
   try {
     response = await axios(axiosConfig);
-    console.log('response');
+    // console.log('response');
     console.log(response);
-    console.log('response');
+    // console.log('response');
   } catch (err) {
     //console.log("catch");
 

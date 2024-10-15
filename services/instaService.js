@@ -27,9 +27,7 @@ const getImage = async (url) => {
 
 const loginInsta = async (account) => {
   const ig = new IgApiClient();
-
   ig.state.generateDevice(account.username);
-
   if (account.proxy) {
     console.log('starting adding proxy', account.proxy);
     ig.state.proxyUrl = account.proxyurl;
@@ -44,9 +42,10 @@ const loginInsta = async (account) => {
 
   try {
     console.log('🚀 Start loign')
-
     const auth = await ig.account.login(account.username, account.password);
+    console.log("auth => ",auth);
     const data = await ig.account.currentUser();
+    console.log("data => ",data);
     // console.log("🚀 ~ loginInsta ~ data:", data)
     const followers = await ig.feed.accountFollowers(data.pk).items();
     // console.log("🚀 ~ loginInsta ~ followers:", followers.length)
@@ -141,13 +140,14 @@ exports.check = asyncHandler(async (req, res, next) => {
         status: '',
         user: '',
         message: '',
-        biography: result.data.biography,
+        biography: result.data?.biography,
         followers: result.followers,
         following: result.following,
         location: result.location,
-        pk_id: result.data.pk_id,
+        pk_id: result.data?.pk_id,
         imgBuff: result.imgBuff,
       };
+      // console.log(result);
       // console.log('🚀 ~ exports.check=asyncHandler ~ result:', result);
       if (result.status === 'error') {
         errors.push(`error in login ${account.name} : ${result.message}`);
@@ -359,6 +359,8 @@ exports.post = asyncHandler(async (req, res, next) => {
     }
 
     caption = resultObject.caption;
+
+    console.log(resultObject);
 
     const result = await post_insta(account, caption, imgBuff, resultObject.mentions, resultObject.locationId);
     // console.log('🚀 ~ exports.post=asyncHandler ~ result:', result);

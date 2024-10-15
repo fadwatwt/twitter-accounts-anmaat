@@ -6,7 +6,7 @@ const {
   writeFileValidator,
 } = require('../utils/validators/fileValidator');
 
-const { readFile, WriteFile } = require('../services/fileService');
+const { readFile, WriteFile, deleteFile } = require('../services/fileService');
 
 const authService = require('../services/authService');
 
@@ -25,6 +25,10 @@ router
     authService.allowedTo(roles.admin, roles.manager),
     writeFileValidator,
     WriteFile
-  );
+  ).delete(
+    authService.protect,
+  authService.allowedTo(roles.admin, roles.manager),
+  deleteFile
+);
 
 module.exports = router;

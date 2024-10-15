@@ -538,7 +538,7 @@ exports.tweetSetOfAccounts = asyncHandler(async (req, res, next) => {
     if (doc && doc.AccountStatus == AccountStatus.NetworkError) {
       errors.push('الموقع غير متاح');
       console.error('the site is unavailable');
-    } else if (doc.AccountBasicInfo.Cookie) {
+    } else if (doc.AccountBasicInfo?.Cookie) {
       const agent =
         doc.agent === 'mobile'
           ? doc.AccountBasicInfo?.MobileUserAgent

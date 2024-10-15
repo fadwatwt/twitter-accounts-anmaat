@@ -7,11 +7,14 @@ const Account = require('../model/accountModel');
 const InsAccount = require('../model/instaModel');
 const ApiError = require('../utils/apiError');
 const path = require('path');
+const axios = require('axios');
 const {
   uploadCSVFile,
   uploadtxtFile,
 } = require('../middleware/uploadFilesMiddleware');
 const { log } = require('console');
+const { requestAxios } = require('../twitterMethod/twitterMethods');
+const { uploadMedia } = require('../twitterMethod/uploadMedia');
 
 // @desc    Get list of accounts
 // @route   GET /api/v1/accounts
@@ -35,6 +38,99 @@ exports.createAccount = factory.createOne(Account);
 // @desc    Update specific account
 // @route   PUT /api/v1/accounts/:id
 // @access  Private/Admin
+exports.newUpadteAccount = async (req, res) => {
+  const { Category, profileImg,bannerImage, name, description, employeeUser,location } = req.body;
+  const  accountId = req.params.id;
+  const errorsMessages = []
+
+  console.log(req.body);
+
+  const account = await Account.findById(accountId);
+  const accountData = {
+    name: account.name,
+    cookie: account.AccountBasicInfo.Cookie,  // استخراج Cookie من AccountBasicInfo
+  };
+  try {
+    if (profileImg) {
+      console.log("enter image condition ");
+      const base64Image = await uploadMedia(account, profileImg); // Assuming uploadMedia returns a Base64 string.
+      const param = { 'image': base64Image };
+      const resUpdateImage = await requestAxios(
+        accountData,
+        'updateImage',
+        "https://api.x.com/1.1/account/update_profile_image.json",
+        'post',
+        param,
+        true
+      );
+      if (resUpdateImage.error) {
+        errorsMessages.push({status:500,message:resUpdateImage.error})
+      }
+    }
+
+    if (bannerImage) {
+      console.log("enter bannerImage condition ");
+      const base64Image = await uploadMedia(account, bannerImage); // Assuming uploadMedia returns a Base64 string.
+      const param = { 'banner': base64Image };
+      const resUpdateImage = await requestAxios(
+        accountData,
+        'updateImage',
+        "https://api.x.com/1.1/account/update_profile_banner.json",
+        'post',
+        param,
+        true
+      );
+      if (resUpdateImage.error) {
+        errorsMessages.push(resUpdateImage.error)
+      }
+    }
+
+    if (name || description || location) {
+      let param = {}
+      console.log("enter name & description condition ");
+      if (name) param.name = name;
+      if (description) param.description = description;
+      if (location) param.location = location;
+
+      const resUpdateProfile = await requestAxios(
+        accountData,
+        'updateProfile',
+        "https://api.x.com/1.1/account/update_profile.json",
+        'post',
+        param,
+        true
+      );
+
+      if (Category || employeeUser) {
+        const updateAccount = await Account.findByIdAndUpdate(
+          accountId,
+          {
+            $set: {
+              Category,
+              employeeUser
+            }
+          },
+          { new: true } // Option to return the updated document
+        );
+      }
+
+      // التعامل مع الاستجابة هنا إذا لزم الأمر
+      if (resUpdateProfile.error) {
+        errorsMessages.push(resUpdateImage.error)
+      }
+    }
+    if(errorsMessages.length > 0){
+      return res.status(500).json(errorsMessages)
+    }
+    // إرجاع استجابة ناجحة
+    return res.status(200).json({ message: "Account updated successfully" });
+
+  } catch (error) {
+    console.error('Error updating account:', error);
+    return res.status(500).json({ error: 'An error occurred while updating the account' });
+  }
+};
+
 exports.updateAccount = factory.updateOne(Account);
 
 // @desc    Delete specific account
