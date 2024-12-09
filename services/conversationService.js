@@ -2,7 +2,6 @@ const asyncHandler = require('express-async-handler');
 const Conversation = require('../model/conversationModel');
 const User = require('../model/userModel');
 const Message = require('../model/messageModel');
-const Task = require('../model/taskModel');
 const multer = require('multer');
 const path = require('path');
 const { io,getUserSocket } = require('../server'); // تأكد من أنك تقوم باستيراد io و users بشكل صحيح
@@ -273,16 +272,12 @@ exports.SetReadMessages = asyncHandler(async (req, res, next) => {
     try{
         const user_id  = req.params.user_id;
         const finalMessages = await this.calculateResponseTimeRatingToMessages(user_id);
-        // const finalTaskRating = await this.calculateResponseTimeRatingToTask(user_id);
         res.status(200).json({data : finalMessages });
     }catch(e){ 
         console.log(e)
     }
 });
 
-exports.calculateResponseTimeRatingToTask = async (user_id) => { 
-
-}
 
 exports.calculateResponseTimeRatingToMessages = async (user_id) => { 
     const conversations = await Conversation.find({ members: {$in : [user_id]} });

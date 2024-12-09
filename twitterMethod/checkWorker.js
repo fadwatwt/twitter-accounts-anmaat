@@ -29,7 +29,7 @@ try {
               ? account.AccountBasicInfo?.MobileUserAgent
               : account.AccountBasicInfo?.WebUserAgent;
           //////////check if proxy is available
-          let proxy = account.AccountBasicInfo?.Location;
+          let proxy = account.AccountBasicInfo?.Location || "";
           console.log('proxy', proxy);
           if (proxy !== '') {
             const proxyArr = proxy.split(':');
@@ -48,8 +48,8 @@ try {
                   account.name,
                   account.password,
                   agent,
-                  accounts[i].cookies,
-                  account.AccountBasicInfo.Location,
+                  account.AccountBasicInfo.Cookie,
+                  account.AccountBasicInfo.Location || "",
                   account.email || '',
                   account.phone || ''
                 ).then((response) => {
@@ -66,6 +66,12 @@ try {
                         {
                           'AccountBasicInfo.Cookie': cookies,
                           agent: userAgent,
+                          'AccountDataInfo1.Location': response?.AccountDataInfo1?.Location || "",
+                          'AccountDataInfo1.FullName': response?.AccountDataInfo1?.FullName || "",
+                          'AccountDataInfo1.Followers': response?.AccountDataInfo1?.Followers || 0,
+                          'AccountDataInfo1.Following': response?.AccountDataInfo1?.Following || 0,
+                          'AccountDataInfo1.Description': response?.Description || "",
+                          'AccountDataInfo1.image': response?.AccountDataInfo1?.image || "",
                         },
                         { new: true }
                       ).exec();
@@ -79,11 +85,13 @@ try {
                               status: true,
                               user: accounts[i].name,
                               message: accounts[i].name + ' تسجيل الدخول بنجاح',
-                              location: response.location,
-                              followers: response.followers_count,
-                              following: response.friends_count,
-                              description: response.description,
-                              response,
+                              accountLocation: response?.AccountDataInfo1?.Location || "",  // تعديل الاسم
+                              accountFullName: response?.AccountDataInfo1?.FullName || "",  // تعديل الاسم
+                              accountFollowers: response?.AccountDataInfo1?.Followers || 0, // تعديل الاسم
+                              accountFollowing: response?.AccountDataInfo1?.Following || 0, // تعديل الاسم
+                              accountDescription: response?.Description || "", // تعديل الاسم
+                              image: response?.AccountDataInfo1?.image || "", // إضافة الصورة
+                              cookies: cookies,  // إرسال الكوكيز بشكل منفصل
                             });
                           }
                         })
@@ -101,20 +109,21 @@ try {
                         status: true,
                         user: accounts[i].name,
                         message: accounts[i].name + ' تسجيل الدخول بنجاح',
-                        location: response.location,
-                        followers: response.followers_count,
-                        following: response.friends_count,
-                        description: response.description,
+                        location: response.AccountBasicInfo.Location || "",
+                        followers: response.AccountBasicInfo.Followers,
+                        following: response.AccountBasicInfo.Following,
+                        description: response.Description,
                         response,
                       });
                     }
                   } else {
                     const status = response.status;
 
-                    const updateCookies = Account.findOneAndUpdate(
+                    const updateCookies =  Account.findOneAndUpdate(
                       { name: accounts[i].name },
                       { AccountStatus: status }
                     ).exec();
+                    console.log(updateCookies);
 
                     updateCookies
                       .then((doc) => {
@@ -175,11 +184,12 @@ try {
                 console.error(e); // ECONNRESET
               });
           } else {
+            console.log("aaaaaaaaaaaaaaaaaaaaaaaaaa account ==>" + account);
             login(
               account.name,
               account.password,
               agent,
-              accounts[i].cookies,
+              account.AccountBasicInfo.Cookie,
               account.AccountBasicInfo.Location,
               account.email || '',
               account.phone || ''

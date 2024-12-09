@@ -3,7 +3,26 @@ const setCookie = require('set-cookie-parser');
 const { HttpProxyAgent } = require('http-proxy-agent');
 //const { HttpProxyAgent } = require("hpagent");
 const { AccountStatus } = require('../model/AccountStatusModel');
-const { requestAxios, follow } = require('./twitterMethods');
+const { requestAxios, follow, accountDataInfo } = require('./twitterMethods');
+const { Worker } = require('worker_threads');
+const path = require('path');
+const ApiError = require('../utils/apiError');
+
+// دالة لإزالة التكرار للـ ct0
+const removeDuplicateCT0 = (cookies) => {
+  const ct0Cookies = cookies.filter(cookie => cookie.name === 'ct0');
+  if (ct0Cookies.length > 1) {
+    // الاحتفاظ بالقيمة الأخيرة من ct0
+    const latestCT0 = ct0Cookies[ct0Cookies.length - 1];
+
+    // حذف جميع الكوكيز المكررة
+    cookies = cookies.filter(cookie => cookie.name !== 'ct0');
+
+    // إضافة الـ ct0 الصحيح
+    cookies.push(latestCT0);
+  }
+  return cookies;
+};
 
 async function updateToken(name, cookies, key, url, data = {}, params = {}) {
   const axiosClient = axios.create();
@@ -38,31 +57,33 @@ async function updateToken(name, cookies, key, url, data = {}, params = {}) {
     const httpsAgent = new HttpProxyAgent(
       'http://' + username + ':' + password + '@' + ip + ':' + port
     );
-    // const httpsAgent = new HttpProxyAgent({
-    //   proxy: "http://" + username + ":" + password + "@" + ip + ":" + port,
-    // });
     axiosConfig.httpAgent = httpsAgent;
     axiosConfig.proxy = false;
-    // axiosConfig.proxy = {
-    //   protocol: "http",
-    //   host: ip,
-    //   port: port,
-    //   auth: {
-    //     username: username,
-    //     password: password,
-    //   },
-    // };
   }
+
   let response = {};
   try {
     response = await axiosClient.post(url + '?' + params, data, axiosConfig);
+    if (response?.status === 200) {
+      console.log("start set cookie");
+      const coo = setCookie.parse(response.headers['set-cookie']);
+      console.log('Parsed Cookies:', JSON.stringify(coo, null, 2));
+
+      // تحقق إذا كان ct0 موجودًا بالفعل في الكوكيز
+      const existingCsrfToken = cookies.get('ct0');
+      const newCsrfToken = coo.find((cookie) => cookie.name === 'ct0')?.value;
+
+      // إذا كانت قيمة ct0 جديدة ولم تكن موجودة بالفعل في الكوكيز
+      if (newCsrfToken && !existingCsrfToken) {
+        console.log("csrfToken added => bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + newCsrfToken);
+        cookies.set('ct0', newCsrfToken);
+      }
+    }
   } catch (err) {
-    // console.log(err.response?.data?.errors);
-    // console.log(err.response);
     cookies.set('flow_errors', 'true');
     let message = '';
-    if (err.response?.data?.errors[0].message) {
-      message = err.response?.data?.errors[0].message;
+    if (err.response && err.response.data && err.response.data.errors && err.response.data.errors[0] && err.response.data.errors[0].message) {
+      message = err.response.data.errors[0].message;
     } else {
       message = name + ' Unknown error';
       cookies.set('status', AccountStatus.UnknownError);
@@ -77,45 +98,37 @@ async function updateToken(name, cookies, key, url, data = {}, params = {}) {
     cookies.set('message', message);
     return cookies;
   }
-  //console.log(key);
 
-  //console.log(JSON.stringify(response.data));
   if (response?.status === 200) {
     const coo = setCookie.parse(response);
 
     const cookieString = coo
       .map(({ name, value }) => `${name}=${value};`)
       .join(' ');
+    console.log("bbbbbb cookieString => " + cookieString);
     const c = cookies.get('cookie') ? cookies.get('cookie') : '';
+    const cleanedCookie = c.replace(/ct0=[^;]+;?/g, '').trim();
+    console.log("cccccccccccccccccccc cleanedCookie => " + cleanedCookie);
     console.log(c);
-    cookies.set('cookie', c + cookieString);
-    //  console.log(JSON.stringify(response.data));
-    // console.log("********************************");
+    cookies.set('cookie', cleanedCookie + cookieString);
 
     if (response.data.subtasks) {
       for (var task in response.data.subtasks) {
-        // console.log(task);
         if (
           response.data.subtasks[task]['enter_text']?.keyboard_type == 'email'
         )
           cookies.set('confirm_email', 'true');
         if (response.data.subtasks[task]['subtask_id'] == 'LoginAcid') {
-          // console.log("loginAcid");
-
           if (
-            response.data.subtasks[task]['enter_text']['hint_text'] ==
-            'Confirmation code'
+            response.data.subtasks[task]['enter_text']['hint_text'] == 'Confirmation code'
           ) {
             cookies.set('confirmation_code', 'true');
             cookies.set('status', AccountStatus.EmailVerify);
             cookies.set('message', 'Your account need email verify');
           }
           if (
-            response.data.subtasks[task]['enter_text']['hint_text'] ==
-            'Phone number'
+            response.data.subtasks[task]['enter_text']['hint_text'] == 'Phone number'
           ) {
-            //console.log("loginAcid");
-
             cookies.set('phoneTask', 'true');
           }
           if (
@@ -123,22 +136,19 @@ async function updateToken(name, cookies, key, url, data = {}, params = {}) {
               .toLowerCase()
               .includes('email')
           ) {
-            //console.log("loginAcid");
-
             cookies.set('confirm_email', 'true');
           }
         }
       }
     }
     cookies.set(key, response.data[key]);
-    // console.log(cookies)
     return cookies;
   }
-  //console.log(response)
-  cookies.set('flow_errors', 'true');
 
+  cookies.set('flow_errors', 'true');
   return cookies;
 }
+
 
 async function init_guest_token(cookies) {
   return await updateToken(
@@ -318,10 +328,11 @@ async function confirm_email(client) {
 }
 
 async function execute_login_flow(client, params) {
+  console.log("execute_login_flow");
   client = await init_guest_token(client);
-  //console.log("gest " + client);
+  console.log("gest " + client);
   client = await flow_start(client);
-  //console.log("flostart " + client);
+  // console.log("flostart " + client);
 
   client = await flow_instrumentation(client);
   // console.log("flow_instrumentation " + client);
@@ -366,47 +377,56 @@ exports.login = async (
   client.set('proxy', proxy);
   client.set('userAgent', userAgent);
   client.set('cookie', cookie);
-  if (cookie) {
-    console.log('pleaaaaaaaaaaaaaaaaaaaase');
-    const url = 'https://api.twitter.com/1.1/account/verify_credentials.json';
-    const account = { username, Proxy: proxy, userAgent, cookie };
-    console.log(account);
-
-    const result = await requestAxios(account, 'data', url);
-    console.log(result);
-    if (!result.error) {
-      console.log('cookie vaild');
+  console.log("cccccccccccccccccccccccccccccccccccccccccccccccc=> " +cookie);
+  try {
+    if (cookie) {
+      console.log("valid cookie");
+      const account = {
+        username: username,
+        cookie:cookie,
+        userAgent: userAgent,
+        proxy: proxy
+      };
+      const result = await accountDataInfo(account);
+      console.log(result);
       return {
         success: true,
-        cookies: client,
-        location: result.location,
-        followers: result.followers_count,
-        following: result.friends_count,
-        description: result.description,
-        result,
+        cookies: {
+          get: (key) => cookie, // استرجاع الكوكي كما هو
+        },
+        AccountDataInfo1: result.AccountDataInfo1 || {},
+        Description: result.Description || '',
+        AccountStatus: result.AccountStatus || 'Unknown',
+      };
+      }
+      else{
+        client.set("cookie","")
+      }
+    console.log('cookie not vaild');
+
+    client.set('email', email);
+    client.set('phone', phone);
+    client.set('password', password);
+    client.set('guest_token', '');
+    client.set('flow_token', '');
+
+    client = await execute_login_flow(client);
+    if (
+      !client ||
+      client.get('flow_errors') === 'true' ||
+      !client.get('cookie').includes('twid')
+    ) {
+      return {
+        success: false,
+        message: client.get('message') || 'Unknown error',
+        status: client.get('status') || AccountStatus.UnknownError,
       };
     }
+
+    return { success: true, cookies: client };
+
+  }catch (e) {
+    console.log(e);
+    return { success: false };
   }
-  console.log('cookie not vaild');
-
-  client.set('email', email);
-  client.set('phone', phone);
-  client.set('password', password);
-  client.set('guest_token', '');
-  client.set('flow_token', '');
-
-  client = await execute_login_flow(client);
-  if (
-    !client ||
-    client.get('flow_errors') === 'true' ||
-    !client.get('cookie').includes('twid')
-  ) {
-    return {
-      success: false,
-      message: client.get('message') || 'Unknown error',
-      status: client.get('status') || AccountStatus.UnknownError,
-    };
-  }
-
-  return { success: true, cookies: client };
 };

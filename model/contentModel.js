@@ -28,8 +28,7 @@ const contentSchema = new mongoose.Schema(
     supervisor: {
       type: mongoose.Schema.ObjectId,
       ref: 'user',
-    },
-    TaskApprovedAt: Date,
+    }
   },
 
   {

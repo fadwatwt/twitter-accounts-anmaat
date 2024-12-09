@@ -4,8 +4,6 @@ const clientRoute = require('./clientRoute');
 const contentRoute = require('./contentRoute');
 const categoryRoute = require('./categoryRoute');
 const fileRoute = require('./fileRoute');
-const taskRoute = require('./taskRoute');
-const taskInfoRoute = require('./taskInfoRoute');
 const attandanceRoute = require('./attandanceRoute');
 const departmentsRoute = require('./departmentRoute');
 const accountCategoryRoute = require('./accountCategoryRoute');
@@ -15,8 +13,7 @@ const captchaRoute = require('./captchaRoute');
 const instaRoute = require('./instegramRoute');
 const conversationRoute = require('./conversationRoute');
 const notificationRoute = require('./notificationRoute');
-const plannerRoute = require('./plannerRoute');
-const chartsRoute = require('./chartsRoute');
+// const chartsRoute = require('./chartsRoute');
 const userCvRoute = require('./userCvRoute');
 
 
@@ -27,8 +24,6 @@ const mountRoutes = (app) => {
   app.use('/api/v1/contents', contentRoute);
   app.use('/api/v1/categories', categoryRoute);
   app.use('/api/v1/files', fileRoute);
-  app.use('/api/v1/tasks', taskRoute);
-  app.use('/api/v1/taskinfos', taskInfoRoute);
   app.use('/api/v1/attandances', attandanceRoute);
   app.use('/api/v1/departments', departmentsRoute);
   app.use('/api/v1/accountcategories', accountCategoryRoute);
@@ -38,8 +33,7 @@ const mountRoutes = (app) => {
   app.use('/api/v1/insta', instaRoute);
   app.use('/api/v1/conversations', conversationRoute);
   app.use('/api/v1/notifications', notificationRoute);
-  app.use('/api/v1/planner', plannerRoute);
-  app.use('/api/v1/charts', chartsRoute);
+  // app.use('/api/v1/charts', chartsRoute);
   app.use('/api/v1/usercv', userCvRoute);
 };
 

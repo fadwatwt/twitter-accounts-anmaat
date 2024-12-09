@@ -44,7 +44,6 @@ const {
 const mongoose = require('mongoose');
 const { getAll } = require('./handlersFactory');
 const factory = require('./handlersFactory');
-const Job = require('../model/taskModel');
 const { uploadMedia } = require('../twitterMethod/uploadMedia');
 const { get } = require('axios');
 const { join } = require('node:path');
@@ -940,7 +939,7 @@ exports.deleteTweettSet = asyncHandler(async (req, res, next) => {
 
       let username = url[i].substring(url[i].indexOf('.com/') + 5);
       username = username.substring(0, username.indexOf('/status/'));
-      username = username.toLowerCase();
+      // username = username.toLowerCase();
 
       console.log(
         '🚀 ~ file: twitterService.js:665 ~ exports.deleteTweettSet ~ username:',
@@ -953,9 +952,11 @@ exports.deleteTweettSet = asyncHandler(async (req, res, next) => {
       );
 
       if (!accounts.includes(username)) {
+        console.log("username include accounts");
         continue;
       }
       const doc = await Account.findOne({ name: username });
+      console.log(doc);
       console.log(
         '🚀 ~ file: twitterService.js:673 ~ exports.deleteTweettSet ~ doc:',
         doc
@@ -985,6 +986,7 @@ exports.deleteTweettSet = asyncHandler(async (req, res, next) => {
 
         console.log('user', c);
         console.log('going to deleteTweet');
+        console.log(tweet_id);
         const delUrl = await deleteTweet(c, tweet_id);
         if (!delUrl.error && !delUrl.errors) {
           let noDelete = response.findIndex(
@@ -1111,11 +1113,11 @@ exports.retweetService = asyncHandler(async (req, res, next) => {
             let tweet_id;
             const tweetIdRegex = /(?:\/status\/|\/\d+\/status\/)(\d+)/;
             console.log('tweetIdRegex', tweetIdRegex);
-            tweet_ids = tweetIdRegex.exec(x)[1];
+            tweet_id = tweetIdRegex.exec(x)[1];
             console.log('tweetIdRegex.exec(x)[1]');
-            console.log(tweet_ids);
-            tweet_ids = tweet_ids.replace('?p=v', '');
-            return reTweet(c, tweet_ids);
+            console.log(tweet_id);
+            tweet_id = tweet_id.replace('?p=v', '');
+            return reTweet(c, tweet_id);
           })
         );
         result.forEach((re) => {
@@ -1184,13 +1186,15 @@ exports.unretweetService = asyncHandler(async (req, res, next) => {
         };
         const result = await Promise.allSettled(
           url.map(async (x) => {
-            let tweet_ids;
-            const tweetIdRegex = /\/status\/(\d+)\?/;
-            tweet_ids = tweetIdRegex.exec(x)[1];
-            console.log(tweet_ids);
-            tweet_ids = tweet_ids.replace('?p=v', '');
 
-            return unReTweet(c, tweet_ids);
+            let tweet_id;
+            const tweetIdRegex = /(?:\/status\/|\/\d+\/status\/)(\d+)/;
+            console.log('tweetIdRegex', tweetIdRegex);
+            tweet_id = tweetIdRegex.exec(x)[1];
+            console.log('tweetIdRegex.exec(x)[1]');
+            console.log(tweet_id);
+            tweet_id = tweet_id.replace('?p=v', '');
+            return unReTweet(c, tweet_id);
           })
         );
         result.forEach((re) => {
@@ -1445,8 +1449,19 @@ exports.unlikeService = asyncHandler(async (req, res, next) => {
         const promises = url.map(async (x, index) => {
           try {
             let tweet_ids;
-            const tweetIdRegex = /\/status\/(\d+)\?/;
-            tweet_ids = tweetIdRegex.exec(x)[1];
+            const tweetIdRegex = /\/status\/(\d+)\??/;
+            const match = tweetIdRegex.exec(x);
+            if (match && match[1]) {
+              tweet_ids = match[1];
+              console.log(tweet_ids);
+            } else {
+              console.error(`Invalid tweet URL: ${x}`);
+              return {
+                index,
+                counter: index + 1,
+                error: { type: 'InvalidUrlError', message: 'الرابط غير صالح أو لا يحتوي على معرّف تغريدة' },
+              };
+            }
             console.log(tweet_ids);
             tweet_ids = tweet_ids.replace('?p=v', '');
             const ans = await unlike(c, tweet_ids);
@@ -1472,6 +1487,7 @@ exports.unlikeService = asyncHandler(async (req, res, next) => {
                 error: { type: 'NotFoundError', message: 'تويت غير موجود' },
               };
             } else {
+              console.log(error);
               return {
                 index,
                 counter: index + 1,

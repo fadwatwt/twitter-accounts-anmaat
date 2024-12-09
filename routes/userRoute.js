@@ -30,7 +30,7 @@ const {
   updateUserAdmin,
   deleteManyUser,
   searchUses,
-  getUserName, getUsersWithTasks
+  getUserName
 } = require('../services/userService');
 
 const authService = require('../services/authService');
@@ -65,7 +65,6 @@ router.put(
   changeUserPasswordValidator,
   changeUserPassword
 );
-router.route('/withTasks').get(getUsersWithTasks)
 router
   .route('/')
   .get(getUsers)

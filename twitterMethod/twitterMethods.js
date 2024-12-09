@@ -3,6 +3,7 @@ const puppeteer = require('puppeteer');
 const setCookie = require('set-cookie-parser');
 const { HttpProxyAgent } = require('http-proxy-agent');
 const url = require('url');
+const fs = require('fs');
 const querystring = require('querystring');
 //const { HttpProxyAgent } = require("hpagent");
 const { uploadMedia, uploadMediaForPublisher } = require('./uploadMedia');
@@ -11,6 +12,7 @@ const { AccountStatus } = require('../model/AccountStatusModel');
 const asyncHandler = require('express-async-handler');
 const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
+
 
 function extractUsernameFromTwitterUrl(twitterUrl) {
   // Parse the URL
@@ -48,12 +50,13 @@ exports.requestAxios = async (
   isurlencoded = false
 ) => {
   let result = {};
-  const cookie = account.cookie || '';
+  const cookie = account.cookie || account.Cookie ||'';
   const splitCookieHeaders = setCookie.splitCookiesString(cookie);
   const cookies = setCookie.parse(splitCookieHeaders);
-  // console.log(cookies);
+  console.log(JSON.stringify(cookies, null, 2));
   const guestToken = cookies[0]['guest_id'] || '';
   const csrf = cookies[0]['ct0'] || '';
+  console.log(csrf);
   const authType = cookies[0]['auth_token'] ? 'OAuth2Session' : '';
   const userAgent = account.userAgent || '';
   let proxy = account.Proxy || '';
@@ -138,14 +141,15 @@ const requestAxios = async (
   isurlencoded = false
 ) => {
   let result = {};
-  const cookie = account.cookie || '';
-
+  const cookie = account.cookie || account.Cookie ||'';
   const splitCookieHeaders = setCookie.splitCookiesString(cookie);
   const cookies = setCookie.parse(splitCookieHeaders);
-  //console.log(cookies);
+  // console.log(JSON.stringify(cookies, null, 2));
   const guestToken = cookies[0]['guest_id'] || '';
   const csrf = cookies[0]['ct0'] || '';
+  // console.log(csrf);
   const authType = cookies[0]['auth_token'] ? 'OAuth2Session' : '';
+  const authToken = cookies[0]['auth_token']
   const userAgent = account.userAgent || '';
   let proxy = account.Proxy || '';
 
@@ -166,6 +170,7 @@ const requestAxios = async (
     headers['Content-Type'] = 'application/x-www-form-urlencoded';
     // headers["Livepipeline-Session"] = "7f8df689-2c5c-4c0e-83a3-bd9b72a8b4c9";
   }
+  // console.log("Headers ============> " + JSON.stringify(headers,null,2));
   let axiosConfig = {
     url,
     headers: headers,
@@ -190,11 +195,14 @@ const requestAxios = async (
   //console.log(axiosConfig);
   try {
     response = await axios(axiosConfig);
+    // fs.writeFileSync('response_output.json', JSON.stringify(response.data, null, 2));
+    // console.log(response);
+    // console.log('response');
   } catch (err) {
     //console.log("catch");
 
-    //console.log(err.response?.data?.errors);
-    // console.log(err);
+    console.log(err.response?.data?.errors);
+    console.log(err);
     result.error = err.response?.data || err.message;
 
     return result;
@@ -213,6 +221,7 @@ const requestAxios = async (
     // console.log(result);
     return result;
   }
+  console.log("Error");
 
   return result;
 };
@@ -311,54 +320,123 @@ exports.getTimline = async (account) => {
     account,
     'timeline',
     'https://twitter.com/i/api/graphql/4S2ihIKfF3xhp-ENxvUAfQ/UserByScreenName?variables=%7B%22screen_name%22%3A%22' +
-      account.username +
-      '%22%2C%22withHighlightedLabel%22%3Atrue%7D'
+    account.username +
+    '%22%2C%22withHighlightedLabel%22%3Atrue%7D'
   );
-  if (result.data) return result.data.data.user;
-  else return result;
+  console.log(result.data.user);
+  if (result.data){
+    console.log("into if condation");
+    // console.log(result.data);
+    return result.data.user;
+  } else{
+    console.log(result);
+    return result
+  } ;
+};
+
+const getTimline = async (account) => {
+  const result = await requestAxios(
+    account,
+    'timeline',
+    'https://twitter.com/i/api/graphql/4S2ihIKfF3xhp-ENxvUAfQ/UserByScreenName?variables=%7B%22screen_name%22%3A%22' +
+    account.username +
+    '%22%2C%22withHighlightedLabel%22%3Atrue%7D'
+  );
+  console.log(result.data.user);
+  if (result.data){
+    console.log("into if condation");
+    // console.log(result.data);
+    return result.data.user;
+  } else{
+    console.log(result);
+    return result
+  } ;
 };
 
 exports.accountDataInfo = async (account) => {
-  //const url =
-  //"https://twitter.com/i/api/graphql/HCosKfLNW1AcOo3la3mMgg/HomeTimeline?variables=%7B%22screen_name%22%3A%22" +
-  //  account.username +
-  //"%22%2C%22withHighlightedLabel%22%3Atrue%2C%22includePromotedContent%22%3A%20true%2C%22withV2Timeline%22%3A%20true%7D&&features=%7B%22blue_business_profile_image_shape_enabled%22%3A%20true%2C%22creator_subscriptions_tweet_preview_api_enabled%22%3A%20true%2C%20%22freedom_of_speech_not_reach_fetch_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22graphql_timeline_v2_bookmark_timeline%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22hidden_profile_likes_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22highlights_tweets_tab_ui_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22interactive_text_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22longform_notetweets_consumption_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22longform_notetweets_inline_media_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22longform_notetweets_rich_text_read_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22longform_notetweets_richtext_consumption_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22profile_foundations_tweet_stats_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22profile_foundations_tweet_stats_tweet_frequency%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_birdwatch_note_limit_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_edit_tweet_api_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_enhance_cards_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_graphql_exclude_directive_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_graphql_skip_user_profile_image_extensions_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_graphql_timeline_navigation_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_media_download_video_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_text_conversations_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_twitter_article_data_v2_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_twitter_article_tweet_consumption_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_twitter_blue_verified_badge_is_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22rweb_lists_timeline_redesign_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22spaces_2022_h2_clipping%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22spaces_2022_h2_spaces_communities%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22standardized_nudges_misinfo%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22subscriptions_verification_info_verified_since_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22tweet_awards_web_tipping_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22tweetypie_unmention_optimization_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22verified_phone_label_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22vibe_api_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22view_counts_everywhere_api_enabled%22%3A%20true%0A%20%20%20%20%7D";
-  const url = 'https://api.twitter.com/1.1/account/verify_credentials.json';
-  const result = await requestAxios(account, 'data', url);
-  // if (result.data) return result.data;
-  // console.log(result);
+  try {
+    const result = await getTimline(account)
 
-  if (!result.error) {
-    const Accountt = {};
+    // const url =
+    //   "https://twitter.com/i/api/graphql/HCosKfLNW1AcOo3la3mMgg/HomeTimeline?variables=%7B%22screen_name%22%3A%22" +
+    //   account.name +
+    //   "%22%2C%22withHighlightedLabel%22%3Atrue%2C%22includePromotedContent%22%3A%20true%2C%22withV2Timeline%22%3A%20true%7D&&features=%7B%22blue_business_profile_image_shape_enabled%22%3A%20true%2C%22creator_subscriptions_tweet_preview_api_enabled%22%3A%20true%2C%20%22freedom_of_speech_not_reach_fetch_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22graphql_timeline_v2_bookmark_timeline%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22hidden_profile_likes_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22highlights_tweets_tab_ui_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22interactive_text_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22longform_notetweets_consumption_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22longform_notetweets_inline_media_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22longform_notetweets_rich_text_read_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22longform_notetweets_richtext_consumption_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22profile_foundations_tweet_stats_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22profile_foundations_tweet_stats_tweet_frequency%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_birdwatch_note_limit_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_edit_tweet_api_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_enhance_cards_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_graphql_exclude_directive_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_graphql_skip_user_profile_image_extensions_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_graphql_timeline_navigation_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_media_download_video_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_text_conversations_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_twitter_article_data_v2_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_twitter_article_tweet_consumption_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22responsive_web_twitter_blue_verified_badge_is_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22rweb_lists_timeline_redesign_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22spaces_2022_h2_clipping%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22spaces_2022_h2_spaces_communities%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22standardized_nudges_misinfo%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22subscriptions_verification_info_verified_since_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22tweet_awards_web_tipping_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22tweetypie_unmention_optimization_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22verified_phone_label_enabled%22%3A%20false%2C%0A%20%20%20%20%20%20%20%20%22vibe_api_enabled%22%3A%20true%2C%0A%20%20%20%20%20%20%20%20%22view_counts_everywhere_api_enabled%22%3A%20true%0A%20%20%20%20%7D";
 
-    Accountt.AccountDataInfo1 = {
-      FullName: result.name,
-      Following: result.friends_count,
-      Followers: result.followers_count,
-      Tweets: result.statuses_count,
-      Favorites: result.favourites_count,
-      AccountLocation: result.location,
-      image: result.profile_image_url_https,
-    };
-    Accountt.AccountStatus = AccountStatus.Normal;
-    // console.log(Accountt);
-    if (result.suspended == true)
-      Accountt.AccountStatus = AccountStatus.Suspended;
-    if (result.needs_phone_verification == true)
-      Accountt.AccountStatus = AccountStatus.PhoneVerify;
-    if (result.advertiser_account_service_levels?.includes('analytics'))
-      Accountt.analytics = true;
-    // else Accountt.analytics = false;
-    //console.log(Accountt);
+    // const result = await requestAxios(account, 'data', url);
+    // const result = "";
+    console.log("start Response written to file.");
+    // fs.writeFileSync('response_output.json', JSON.stringify(result.data, null, 2));
+    // console.log("end Response written to file.");
+    // console.log("Result Data =============================>>>>>>>>" + JSON.stringify(result.data,null,2));
 
-    const islocked = await checklocked(account);
-    if (islocked.locked) {
-      Accountt.AccountStatus = islocked.status;
+    if (result && result.legacy) {
+      const Accountt = {};
+
+      const userData = result.legacy;
+
+      // حفظ البيانات المطلوبة
+      Accountt.AccountDataInfo1 = {
+        FullName: userData.name, // الاسم الكامل
+        Following: userData.friends_count, // عدد الحسابات التي يتابعها
+        Followers: userData.followers_count, // عدد المتابعين
+        Tweets: userData.statuses_count, // عدد التغريدات
+        AccountLocation: userData.location, // الموقع
+        image: userData.profile_image_url_https, // رابط الصورة الشخصية
+      };
+
+
+      console.log(JSON.stringify(Accountt.AccountDataInfo1, null, 2));
+
+      Accountt.AccountStatus = "Normal"; // الحالة الافتراضية للحساب
+      Accountt.Description = userData.description
+
+      if (userData.suspended === true) Accountt.AccountStatus = "Suspended"; // إذا كان الحساب موقوفًا
+      if (userData.needs_phone_verification === true) Accountt.AccountStatus = "PhoneVerify"; // إذا كان يحتاج تحقق الهاتف
+      if (userData.advertiser_account_service_levels?.includes('analytics')) Accountt.analytics = true; // إذا كان حسابًا مخصصًا للإعلانات
+
+      // التحقق من حالة القفل
+      // const islocked = await checklocked(account); // دالة تحقق حالة القفل
+      // if (islocked.locked) {
+      //   Accountt.AccountStatus = islocked.status;
+      // }
+
+      return Accountt; // إعادة بيانات الحساب مع الحالة
     }
-    console.log(Accountt);
-    return Accountt;
+  } catch (error) {
+    console.log(error);
+    return error; // إعادة بيانات الحساب مع الحالة
   }
-  return result;
+
+};
+exports.tweetText = async (account, tweet) => {
+  const params = new URLSearchParams({
+    status: tweet,
+    include_profile_interstitial_type: 1,
+    include_blocking: 1,
+    include_blocked_by: 1,
+    include_followed_by: 1,
+    include_want_retweets: 1,
+    include_mute_edge: 1,
+    include_can_dm: 1,
+    include_can_media_tag: 1,
+    skip_status: 1,
+    cards_platform: 'Web-12',
+    include_cards: 1,
+    include_ext_alt_text: true,
+    include_quote_count: true,
+    include_reply_count: 1,
+    tweet_mode: 'extended',
+    simple_quoted_tweet: true,
+    trim_user: false,
+    include_ext_media_color: true,
+    include_ext_media_availability: true,
+    auto_populate_reply_metadata: false,
+    batch_mode: 'off',
+  });
+  const url = 'https://api.twitter.com/1.1/statuses/update.json';
+  const status = await requestAxios(account, 'status', url, 'post', params);
+  // console.log(JSON.stringify(status));
+  return status;
 };
 exports.tweetText = async (account, tweet) => {
   const params = new URLSearchParams({
@@ -974,3 +1052,16 @@ let checklocked = async (account) => {
   // }
 
 };
+
+const getCookieValue = (cookieString, cookieName) => {
+  const cookies = cookieString.split(';');  // تقسيم الكوكيز
+  for (let i = 0; i < cookies.length; i++) {
+    const cookie = cookies[i].trim();
+    if (cookie.startsWith(cookieName + "=")) {
+      return cookie.substring(cookieName.length + 1);  // إرجاع قيمة الكوكي
+    }
+  }
+  return null;  // إذا لم يتم العثور على الكوكي
+};
+
+

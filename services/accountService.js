@@ -50,12 +50,13 @@ exports.newUpadteAccount = async (req, res) => {
     name: account.name,
     cookie: account.AccountBasicInfo.Cookie,  // استخراج Cookie من AccountBasicInfo
   };
+  let resUpdateImage;
   try {
     if (profileImg) {
       console.log("enter image condition ");
       const base64Image = await uploadMedia(account, profileImg); // Assuming uploadMedia returns a Base64 string.
       const param = { 'image': base64Image };
-      const resUpdateImage = await requestAxios(
+       resUpdateImage = await requestAxios(
         accountData,
         'updateImage',
         "https://api.x.com/1.1/account/update_profile_image.json",
@@ -72,7 +73,7 @@ exports.newUpadteAccount = async (req, res) => {
       console.log("enter bannerImage condition ");
       const base64Image = await uploadMedia(account, bannerImage); // Assuming uploadMedia returns a Base64 string.
       const param = { 'banner': base64Image };
-      const resUpdateImage = await requestAxios(
+       resUpdateImage = await requestAxios(
         accountData,
         'updateImage',
         "https://api.x.com/1.1/account/update_profile_banner.json",
@@ -80,8 +81,8 @@ exports.newUpadteAccount = async (req, res) => {
         param,
         true
       );
-      if (resUpdateImage.error) {
-        errorsMessages.push(resUpdateImage.error)
+      if (resUpdateImage?.error) {
+        errorsMessages.push(resUpdateImage?.error)
       }
     }
 
@@ -115,8 +116,8 @@ exports.newUpadteAccount = async (req, res) => {
       }
 
       // التعامل مع الاستجابة هنا إذا لزم الأمر
-      if (resUpdateProfile.error) {
-        errorsMessages.push(resUpdateImage.error)
+      if (resUpdateProfile?.error) {
+        errorsMessages.push(resUpdateImage?.error)
       }
     }
     if(errorsMessages.length > 0){
@@ -130,6 +131,7 @@ exports.newUpadteAccount = async (req, res) => {
     return res.status(500).json({ error: 'An error occurred while updating the account' });
   }
 };
+
 
 exports.updateAccount = factory.updateOne(Account);
 
@@ -530,7 +532,7 @@ exports.check = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.accountData = asyncHandler(async (req, res, next) => {
   const response = [];
-  const thread = new Worker('../twitterMethod/accountDataWorker', {
+  const thread = new Worker( path.join(__dirname, '../twitterMethod/accountDataWorker.js'), {
     workerData: {
       accounts: req.body.accounts,
     },

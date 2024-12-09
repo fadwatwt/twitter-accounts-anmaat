@@ -10,22 +10,11 @@ const {
   uploadSingleFile,
 } = require('../middleware/uploadFilesMiddleware');
 const factory = require('./handlersFactory');
-const Task = require('../model/contentModel');
 const {
   getSpecificFolder,
   getCurrentDateNames,
 } = require('../utils/FileHandlers');
 
-exports.uploadTaskFile = uploadMixOfFiles([
-  {
-    name: 'tweetFile',
-    maxCount: 1,
-  },
-  {
-    name: 'images',
-    maxCount: 5,
-  },
-]);
 
 exports.resizeTweetfile = asyncHandler(async (req, res, next) => {
   //console.log(req.files);
@@ -76,21 +65,17 @@ exports.resizeTweetfile = asyncHandler(async (req, res, next) => {
 // @desc    Get list of Tasks
 // @route   GET /api/v1/Tasks
 // @access  Private
-exports.getTasks = factory.getAll(Task, 'contents');
 
 // @desc    Get specific task by id
 // @route   GET /api/v1/Tasks/:id
 // @access  private
-exports.getTask = factory.getOne(Task, 'users');
 
 // @desc    Create task
 // @route   POST  /api/v1/Tasks
 // @access  Private
-exports.createTask = factory.createOne(Task);
 // @desc    Update specific task
 // @route   PUT /api/v1/tasks/:id
 // @access  Private
-exports.updateTask = factory.updateOne(Task);
 
 // @desc    Delete specific product
 // @route   DELETE /api/v1/products/:id

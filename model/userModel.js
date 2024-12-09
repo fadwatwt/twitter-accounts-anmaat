@@ -56,12 +56,6 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: 'Department',
     },
-    tasks: [
-      {
-        type: mongoose.Schema.ObjectId,
-        ref: 'Task',
-      }
-    ],
     socialType: [String],  // تحديد نوع العناصر في المصفوفة
     rating: {
       type: Number,
@@ -69,11 +63,6 @@ const userSchema = new mongoose.Schema(
       default: 0,
       min: 0,
       max: 100,
-    },
-    totalTasksRated: {
-      type: Number,
-      required: true,
-      default: 0,
     },
     weekEnd: {
       type: Number,

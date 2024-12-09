@@ -36,31 +36,6 @@ exports.resizeImage = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.getUsers = factory.getAll(User, 'users');
 
-exports.getUsersWithTasks = asyncHandler(async (req, res) => {
-  // قراءة معلمات الاستعلام
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 50;
-  const skip = (page - 1) * limit;
-
-  // تنفيذ الاستعلام مع التصفح
-  const users = await User.find()
-    .select('socialType slug role type holidays isHashTagAllow name email tasks')
-    .skip(skip)
-    .limit(limit)
-    .exec();
-
-  // الحصول على العدد الإجمالي للمستخدمين لتحديد عدد الصفحات الكلي
-  const total = await User.countDocuments();
-
-  // إرجاع النتائج مع معلومات التصفح
-  res.status(200).json({
-    page,
-    limit,
-    total,
-    totalPages: Math.ceil(total / limit),
-    data: users,
-  });
-});
 // @desc    Get specific user by id
 // @route   GET /api/v1/users/:id
 // @access  Private/Admin
@@ -271,59 +246,4 @@ exports.getUserName = asyncHandler(async (req, res, next) => {
   res.status(200).json(user);
 });
 
-
-
-exports.updateManagerRatingAutomatically = async (deliveryTime, evaluationTime, userId) => {
-  try {
-    let timeDifference = evaluationTime - deliveryTime; // الفرق بالميلي ثانية
-    const maxTimeDifference = 24 * 60 * 60 * 1000; // 24 ساعة بالميلي ثانية
-    const daysDifference = timeDifference / (1000 * 60 * 60 * 24);
-    const user = await User.findById(userId);
-
-    const daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
-
-    const actualDays = [];
-    for (let i = 0; i <= daysDifference; i++) {
-      const currentDate = new Date(deliveryTime.getTime() + (i * (1000 * 60 * 60 * 24)));
-      const dayName = daysOfWeek[currentDate.getDay()];
-      actualDays.push(dayName);
-    }
-
-    if(actualDays.includes(user.weekEnd)){
-      timeDifference -= 24 * 60 * 60 * 1000;
-    }
-
-    // حساب التقييم الجديد بناءً على الوقت المستغرق بشكل خطي
-    let newRating = 100 - Math.ceil((timeDifference / maxTimeDifference) * 100);
-
-    // تأكد من أن التقييم لا يقل عن 0
-    newRating = Math.max(0, newRating);
-
-    // الحصول على بيانات المستخدم الحالية
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    // حساب التقييم المعدل بإضافة التقييم الجديد إلى التقييم السابق وتقسيمه على عدد التاسكات التي قيمها المدير
-    let totalTasksRated = user.totalTasksRated || 0; // عدد التاسكات التي قيمها المدير
-    let currentRating = user.rating || 0; // التقييم السابق (إذا لم يكن موجود، فالقيمة الافتراضية هي 0)
-
-    // حساب التقييم المعدل الجديد
-    const updatedRating = ((currentRating * totalTasksRated) + newRating) / (totalTasksRated + 1);
-
-    // تحديث تقييم المدير وعدد التاسكات التي قيمها
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $set: { rating: updatedRating, totalTasksRated: totalTasksRated + 1 } },
-      { new: true } // إرجاع المستخدم المحدث بعد التعديل
-    );
-
-    console.log(updatedUser);
-
-    return updatedUser;
-  } catch (error) {
-    console.error('Error updating manager rating:', error);
-    throw error;
-  }
-};
 
