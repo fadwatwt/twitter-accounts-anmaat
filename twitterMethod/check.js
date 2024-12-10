@@ -328,21 +328,19 @@ async function confirm_email(client) {
 }
 
 async function execute_login_flow(client, params) {
-  console.log("execute_login_flow");
+  console.log("execute_login_flow " + JSON.stringify(client,null,2));
   client = await init_guest_token(client);
   console.log("gest " + client);
   client = await flow_start(client);
-  // console.log("flostart " + client);
-
+  console.log("flostart " + client);
   client = await flow_instrumentation(client);
-  // console.log("flow_instrumentation " + client);
-
+  console.log("flow_instrumentation " + client);
   client = await flow_username(client);
-  // console.log("username " + client);
+  console.log("username " + JSON.stringify(client,null,2));
   if (client.get('flow_errors') == 'true') return client;
 
   client = await flow_password(client);
-  // console.log("pass " + client);
+  console.log("pass " + client);
   if (client.get('flow_errors') == 'true') return client;
   client = await flow_duplication_check(client);
   //console.log("dup " + client);
@@ -376,7 +374,6 @@ exports.login = async (
   client.set('username', username);
   client.set('proxy', proxy);
   client.set('userAgent', userAgent);
-  client.set('cookie', cookie);
   console.log("cccccccccccccccccccccccccccccccccccccccccccccccc=> " +cookie);
   try {
     if (cookie) {
@@ -387,28 +384,36 @@ exports.login = async (
         userAgent: userAgent,
         proxy: proxy
       };
-      const result = await accountDataInfo(account);
-      console.log(result);
-      return {
-        success: true,
-        cookies: {
-          get: (key) => cookie, // استرجاع الكوكي كما هو
-        },
-        AccountDataInfo1: result.AccountDataInfo1 || {},
-        Description: result.Description || '',
-        AccountStatus: result.AccountStatus || 'Unknown',
-      };
+      try {
+        const result = await accountDataInfo(account);
+
+        if (result && result.AccountDataInfo1) {
+          return {
+            success: true,
+            cookies: {
+              get: (key) => cookie, // استرجاع الكوكي كما هو
+            },
+            AccountDataInfo1: result.AccountDataInfo1 || {},
+            Description: result.Description || '',
+            AccountStatus: result.AccountStatus || 'Unknown',
+          };
+        }
+      } catch (error) {
+        console.log("Error in accountDataInfo:", error);
       }
-      else{
-        client.set("cookie","")
       }
     console.log('cookie not vaild');
-
+    client.set("cookie","")
     client.set('email', email);
     client.set('phone', phone);
     client.set('password', password);
     client.set('guest_token', '');
     client.set('flow_token', '');
+
+    console.log("client before enter " + JSON.stringify(Object.fromEntries(client), null, 2));
+    console.log("username  " + username);
+    console.log("email " + email);
+    console.log("password " + password);
 
     client = await execute_login_flow(client);
     if (
