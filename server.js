@@ -12,6 +12,7 @@ const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
 const flash = require('connect-flash');
 var timeout = require('connect-timeout');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 const http = require('http');
 dotenv.config({ path: 'config.env' });
 const authService = require('./services/authService');
@@ -192,6 +193,12 @@ app.use(
   '/uploads/conversations',
   express.static(path.join(__dirname, 'uploads/conversations'))
 );
+
+// app.use('/', createProxyMiddleware({
+//   target: 'http://45.93.224.192:12323', // عنوان البروكسي
+//   changeOrigin: true, // تغيير الأصل إلى الهدف
+//   auth: '14a3c4b61bd1b:3928a02217', // اسم المستخدم وكلمة المرور
+// }));
 
 app.use('/', (req, res) => {
   res.send('Server is running...');

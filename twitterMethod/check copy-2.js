@@ -81,6 +81,7 @@ async function updateToken(name, cookies, key, url, data = {}, params = {}) {
       }
     }
   } catch (err) {
+    // console.log(JSON.stringify(err,null,2));
     cookies.set('flow_errors', 'true');
     let message = '';
     if (err.response && err.response.data && err.response.data.errors && err.response.data.errors[0] && err.response.data.errors[0].message) {
@@ -115,15 +116,18 @@ async function updateToken(name, cookies, key, url, data = {}, params = {}) {
 
     if (response.data.subtasks) {
       for (var task in response.data.subtasks) {
-        if (response.data.subtasks?.some(t => t.subtask_id === 'LoginTwoFactorAuthChallenge')) {
-          cookies.set('confirmation_code', 'true');
-          console.log("confirmation_code is true");
-        }
         if (
           response.data.subtasks[task]['enter_text']?.keyboard_type == 'email'
         )
           cookies.set('confirm_email', 'true');
-        if (response.data.subtasks[task]['subtask_id'] == 'LoginAcid') {
+
+        if (name === "2FA Code"){
+          console.log(JSON.stringify("oooooooooooooooooooooo" +response.data.subtasks[task],null,2));
+        }
+        if (response.data.subtasks?.some(t => t.subtask_id === 'LoginTwoFactorAuthChallenge')) {
+          cookies.set('confirmation_code', 'true');
+        }
+        if (response.data.subtasks[task]['subtask_id'] == 'LoginTwoFactorAuthChallenge') {
           if (
             response.data.subtasks[task]['enter_text']['hint_text'] == 'Confirmation code'
           ) {
@@ -154,29 +158,27 @@ async function updateToken(name, cookies, key, url, data = {}, params = {}) {
   return cookies;
 }
 
-const generate2FACodes = () => {
-  const secret = "P24NBWCSUQMTVESC";
-  const step = 30 * 1000; // مدة كل خطوة بالمللي ثانية (30 ثانية)
-  const currentTime = Date.now(); // الوقت الحالي بالمللي ثانية
-  const codeNow = authenticator.generate(secret);
-  const codeBefore = authenticator.generate(secret, { epoch: currentTime - step });
-  const codeAfter = authenticator.generate(secret, { epoch: currentTime + step });
-
-  console.log("Your 2FA Code Now:", codeNow);
-  console.log("2FA Code Before (30 seconds ago):", codeBefore);
-  console.log("2FA Code After (30 seconds later):", codeAfter);
-
-  return [codeNow, codeBefore, codeAfter];
-}
-
 
 async function init_guest_token(cookies) {
   return await updateToken(
     'guest Token',
     cookies,
     'guest_token',
-    'https://api.twitter.com/1.1/guest/activate.json'
+    'https://api.x.com/1.1/guest/activate.json'
   );
+}
+const generate2FACodes = () => {
+  const secret = "P24NBWCSUQMTVESC";
+  const currentStep = authenticator.timeUsed();
+  const codeNow = authenticator.generate(secret);
+  const codeBefore = authenticator.generate(secret, currentStep - 1);
+  const codeAfter = authenticator.generate(secret, currentStep + 1);
+
+  console.log("Your 2FA Code Now:", codeNow);
+  console.log("2FA Code Before (30 seconds ago):", codeBefore);
+  console.log("2FA Code After (30 seconds later):", codeAfter);
+
+  return [codeNow, codeBefore, codeAfter];
 }
 
 async function flow_start(cookies) {
@@ -186,7 +188,7 @@ async function flow_start(cookies) {
     'Start flow',
     cookies,
     'flow_token',
-    'https://api.twitter.com/1.1/onboarding/task.json',
+    'https://api.x.com/1.1/onboarding/task.json',
 
     {
       input_flow_data: {
@@ -206,7 +208,7 @@ async function flow_instrumentation(cookies) {
     'flow instrumentation',
     cookies,
     'flow_token',
-    'https://api.twitter.com/1.1/onboarding/task.json',
+    'https://api.x.com/1.1/onboarding/task.json',
     {
       flow_token: cookies.get('flow_token'),
       subtask_inputs: [
@@ -224,7 +226,7 @@ async function flow_username(cookies) {
     'username',
     cookies,
     'flow_token',
-    'https://api.twitter.com/1.1/onboarding/task.json',
+    'https://api.x.com/1.1/onboarding/task.json',
     {
       flow_token: cookies.get('flow_token'),
       subtask_inputs: [
@@ -252,7 +254,7 @@ async function flow_password(client) {
     'password',
     client,
     'flow_token',
-    'https://api.twitter.com/1.1/onboarding/task.json',
+    'https://api.x.com/1.1/onboarding/task.json',
     {
       flow_token: client.get('flow_token'),
       subtask_inputs: [
@@ -275,7 +277,6 @@ async function flow_2FA(client) {
   const isValidCodeAfter = authenticator.check(codeBefore, "P24NBWCSUQMTVESC");
   try {
     if (isValidCodeNow) {
-      console.log("code Now is working");
       let response = await updateToken(
         '2FA Code',
         client,
@@ -295,12 +296,10 @@ async function flow_2FA(client) {
         }
       );
       if (response?.status === 200) {
-        client.set('flow_errors', false); // ✅ إعادة تعيين flow_errors
         return client;
       }
     }
-    else if (isValidCodeBefore) {
-      console.log("code Before is working");
+     else if (isValidCodeBefore) {
       let responseBefore = await updateToken(
         '2FA Code Before',
         client,
@@ -320,12 +319,10 @@ async function flow_2FA(client) {
         }
       );
       if (responseBefore?.status === 200) {
-        client.set('flow_errors',false); // ✅ إعادة تعيين flow_errors
         return client;
       }
     }
     else if (isValidCodeAfter) {
-      console.log("code After is working");
       let responseAfter = await updateToken(
         '2FA Code After',
         client,
@@ -345,7 +342,6 @@ async function flow_2FA(client) {
         }
       );
       if (responseAfter?.status === 200) {
-        client.set('flow_errors', false); // ✅ إعادة تعيين flow_errors
         return client;
       }
     }
@@ -353,11 +349,13 @@ async function flow_2FA(client) {
       console.log("All codes is invalid");
     }
   } catch (err) {
-    client.set('flow_errors', true);
     console.log("Error with the 2FA code after:", err);
   }
+  // إذا فشلت جميع المحاولات
+  client.set('flow_errors', 'true');
   return client;
 }
+
 async function flow_phone(client) {
   // console.log(client.get("phone"))
   if (client.get('phone') == '') {
@@ -374,7 +372,7 @@ async function flow_phone(client) {
     'phone',
     client,
     'flow_token',
-    'https://api.twitter.com/1.1/onboarding/task.json',
+    'https://api.x.com/1.1/onboarding/task.json',
     {
       flow_token: client.get('flow_token'),
       subtask_inputs: [
@@ -394,7 +392,7 @@ async function flow_duplication_check(client) {
     'Login',
     client,
     'flow_token',
-    'https://api.twitter.com/1.1/onboarding/task.json',
+    'https://api.x.com/1.1/onboarding/task.json',
     {
       flow_token: client.get('flow_token'),
       subtask_inputs: [
@@ -459,29 +457,20 @@ async function execute_login_flow(client, params) {
     console.log("Starting 2FA process");
     client = await flow_2FA(client);
     if (client.get('flow_errors') === 'true') {
-      console.log("flow_errors in 2FA");
       return client;
     }
   }
-
-  if (client.get('flow_errors') === 'true') {
-    console.log("start flow_errors");
-  }
-
   client = await flow_duplication_check(client);
-
   //console.log("dup " + client);
   if (client.get('flow_errors') == 'true') return client;
   //solve email challenge
   if (client.get('confirm_email') == 'true') {
-    console.log("confirm_email");
     client = await confirm_email(client);
     //console.log("email confirmation required");
     if (client.get('flow_errors') == 'true') return client;
   }
   //solve email challenge
   if (client.get('phoneTask') == 'true') {
-    console.log("phoneTask");
     client = await flow_phone(client);
     if (client.get('flow_errors') == 'true') return client;
     // console.log("phone");
@@ -545,16 +534,17 @@ exports.login = async (
     console.log("password " + password);
 
     client = await execute_login_flow(client);
-    if (!client){
-      console.log("client is not found");
+    if (
+      !client ||
+      client.get('flow_errors') === 'true' ||
+      !client.get('cookie').includes('twid')
+    ) {
+      return {
+        success: false,
+        message: client.get('message') || 'Unknown error',
+        status: client.get('status') || AccountStatus.UnknownError,
+      };
     }
-    if (client.get('flow_errors') === 'true'){
-      console.log("flow_errors is found");
-    }
-    if (!client.get('cookie').includes('twid')){
-      console.log("twid is not found");
-    }
-
     if (
       !client ||
       client.get('flow_errors') === 'true' ||
