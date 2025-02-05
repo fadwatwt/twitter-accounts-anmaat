@@ -194,15 +194,15 @@ app.use(
   express.static(path.join(__dirname, 'uploads/conversations'))
 );
 
-// app.use('/', createProxyMiddleware({
-//   target: 'http://45.93.224.192:12323', // عنوان البروكسي
-//   changeOrigin: true, // تغيير الأصل إلى الهدف
-//   auth: '14a3c4b61bd1b:3928a02217', // اسم المستخدم وكلمة المرور
-// }));
+app.use('/', createProxyMiddleware({
+  target: 'http://45.93.224.192:12323', // عنوان البروكسي
+  changeOrigin: true, // تغيير الأصل إلى الهدف
+  auth: '14a3c4b61bd1b:3928a02217', // اسم المستخدم وكلمة المرور
+}));
 
-app.use('/', (req, res) => {
-  res.send('Server is running...');
-});
+// app.use('/', (req, res) => {
+//   res.send('Server is running...');
+// });
 
 app.get('/api', (req, res) => {
   res.send('Hello from server, kiro here');

@@ -120,10 +120,6 @@ async function updateToken(name, cookies, key, url, data = {}, params = {}) {
           cookies.set('confirmation_code', 'true');
           console.log("confirmation_code is true");
         }
-        if (response.data.subtasks?.some(t => t.subtask_id === 'LoginEnterAlternateIdentifierSubtask')) {
-          cookies.set('verify_email', 'true');
-          console.log("verify_email is true");
-        }
         if (
           response.data.subtasks[task]['enter_text']?.keyboard_type == 'email'
         )
@@ -160,22 +156,30 @@ async function updateToken(name, cookies, key, url, data = {}, params = {}) {
 }
 
 const generate2FACodes = () => {
-  const secret = "P24NBWCSUQMTVESC";//HaliAlali52938
-  // const secret = "KDOKWT5RWWPSZUUE";
+  // const secret = "P24NBWCSUQMTVESC"; //HaliAlali52938
+  const secret = "ZDR4SRZRPL2TV5ZF";
   const step = 30 * 1000; // مدة كل خطوة بالمللي ثانية (30 ثانية)
-  const currentTime = Date.now(); // الوقت الحالي بالمللي ثانية
-  const codeNow = authenticator.generate(secret);
-  const codeBefore = authenticator.generate(secret, { epoch: currentTime - step });
-  const codeAfter = authenticator.generate(secret, { epoch: currentTime + step });
 
-  console.log("Your 2FA Code Now:", codeNow);
-  console.log("2FA Code Before (30 seconds ago):", codeBefore);
-  console.log("2FA Code After (30 seconds later):", codeAfter);
+  // جلب الوقت من خادم NTP
+  ntpClient.getNetworkTime("pool.ntp.org", 123, (err, date) => {
+    if (err) {
+      console.error("Error fetching NTP time:", err);
+      return;
+    }
 
-  return [codeNow, codeBefore, codeAfter];
-}
+    const currentTime = date.getTime(); // الوقت العالمي بالمللي ثانية
+    console.log(currentTime);
+    const codeNow = totp.generate(secret, { epoch: currentTime });
+    const prevTime = currentTime - step;
+    const nextTime = currentTime + step;
+    const codeBefore = totp.generate(secret, { epoch: prevTime });
+    const codeAfter = totp.generate(secret, { epoch: nextTime });
 
-
+    console.log("Your 2FA Code Now:", codeNow);
+    console.log("2FA Code Before (30 seconds ago):", codeBefore);
+    console.log("2FA Code After (30 seconds later):", codeAfter);
+  });
+};
 
 
 async function init_guest_token(cookies) {
@@ -276,7 +280,7 @@ async function flow_password(client) {
   );
 }
 async function flow_2FA(client) {
-  const [codeNow, codeBefore, codeAfter] =  generate2FACodes();
+  const [codeNow, codeBefore, codeAfter] = generate2FACodes();
 
   const isValidCodeNow = authenticator.check(codeNow, "P24NBWCSUQMTVESC");
   const isValidCodeBefore = authenticator.check(codeBefore, "P24NBWCSUQMTVESC");
@@ -446,38 +450,6 @@ async function confirm_email(client) {
   );
 }
 
-async function flow_verify_email(client) {
-  console.log("Enter flow_confirm_email")
-  if (client.get('email') === '') {
-    client.set('flow_errors', 'true');
-    client.set(
-      'message',
-      'Your account need flow_confirm_email verify and the email is empty.'
-    );
-    client.set('status', AccountStatus.PhoneVerify);
-
-    return client;
-  }
-  return await updateToken(
-    'email',
-    client,
-    'flow_token',
-    'https://api.x.com/1.1/onboarding/task.json',
-    {
-      flow_token: client.get('flow_token'),
-      subtask_inputs: [
-        {
-          subtask_id: 'LoginEnterAlternateIdentifierSubtask',
-          enter_text: {
-            text: client.get('email'),
-            link: 'next_link',
-          },
-        },
-      ],
-    }
-  );
-}
-
 async function execute_login_flow(client, params) {
   console.log("execute_login_flow " + JSON.stringify(client,null,2));
   client = await init_guest_token(client);
@@ -488,12 +460,6 @@ async function execute_login_flow(client, params) {
   console.log("flow_instrumentation " + client);
   client = await flow_username(client);
   console.log("username " + JSON.stringify(client,null,2));
-  if (client.get('verify_email') == 'true') {
-    console.log("verify_email");
-    client = await flow_verify_email(client);
-    //console.log("email confirmation required");
-    if (client.get('flow_errors') == 'true') return client;
-  }
   if (client.get('flow_errors') == 'true') return client;
 
   client = await flow_password(client);

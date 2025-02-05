@@ -169,10 +169,12 @@ async function init_guest_token(cookies) {
 }
 const generate2FACodes = () => {
   const secret = "P24NBWCSUQMTVESC";
-  const currentStep = authenticator.timeUsed();
+  // const secret = "KDOKWT5RWWPSZUUE";
+  const step = 30 * 1000; // مدة كل خطوة بالمللي ثانية (30 ثانية)
+  const currentTime = Date.now(); // الوقت الحالي بالمللي ثانية
   const codeNow = authenticator.generate(secret);
-  const codeBefore = authenticator.generate(secret, currentStep - 1);
-  const codeAfter = authenticator.generate(secret, currentStep + 1);
+  const codeBefore = authenticator.generate(secret, { epoch: currentTime - step });
+  const codeAfter = authenticator.generate(secret, { epoch: currentTime + step });
 
   console.log("Your 2FA Code Now:", codeNow);
   console.log("2FA Code Before (30 seconds ago):", codeBefore);
@@ -180,6 +182,7 @@ const generate2FACodes = () => {
 
   return [codeNow, codeBefore, codeAfter];
 }
+
 
 async function flow_start(cookies) {
   const param = new URLSearchParams();
