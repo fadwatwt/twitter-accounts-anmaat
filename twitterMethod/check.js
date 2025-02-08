@@ -77,7 +77,7 @@ async function updateToken(name, cookies, key, url, data = {}, params = {}) {
 
       // إذا كانت قيمة ct0 جديدة ولم تكن موجودة بالفعل في الكوكيز
       if (newCsrfToken && !existingCsrfToken) {
-        console.log("csrfToken added => bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + newCsrfToken);
+        // console.log("csrfToken added => bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + newCsrfToken);
         cookies.set('ct0', newCsrfToken);
       }
     }
@@ -107,10 +107,10 @@ async function updateToken(name, cookies, key, url, data = {}, params = {}) {
     const cookieString = coo
       .map(({ name, value }) => `${name}=${value};`)
       .join(' ');
-    console.log("bbbbbb cookieString => " + cookieString);
+    // console.log("bbbbbb cookieString => " + cookieString);
     const c = cookies.get('cookie') ? cookies.get('cookie') : '';
     const cleanedCookie = c.replace(/ct0=[^;]+;?/g, '').trim();
-    console.log("cccccccccccccccccccc cleanedCookie => " + cleanedCookie);
+    // console.log("cccccccccccccccccccc cleanedCookie => " + cleanedCookie);
     console.log(c);
     cookies.set('cookie', cleanedCookie + cookieString);
 
@@ -159,11 +159,12 @@ async function updateToken(name, cookies, key, url, data = {}, params = {}) {
   return cookies;
 }
 
-const generate2FACodes = () => {
-  const secret = "P24NBWCSUQMTVESC";//HaliAlali52938
+const generate2FACodes = (secret) => {
+  // const secret = "P24NBWCSUQMTVESC";//HaliAlali52938
   // const secret = "KDOKWT5RWWPSZUUE";
   const step = 30 * 1000; // مدة كل خطوة بالمللي ثانية (30 ثانية)
   const currentTime = Date.now(); // الوقت الحالي بالمللي ثانية
+  // console.log("ssssssssssssssssssssssssss => " +secret);
   const codeNow = authenticator.generate(secret);
   const codeBefore = authenticator.generate(secret, { epoch: currentTime - step });
   const codeAfter = authenticator.generate(secret, { epoch: currentTime + step });
@@ -275,12 +276,13 @@ async function flow_password(client) {
     }
   );
 }
-async function flow_2FA(client) {
-  const [codeNow, codeBefore, codeAfter] =  generate2FACodes();
+async function flow_2FA(client,secretKey) {
+  // console.log("client in flow_2FA => " + secretKey);
+  const [codeNow, codeBefore, codeAfter] =  generate2FACodes(secretKey);
 
-  const isValidCodeNow = authenticator.check(codeNow, "P24NBWCSUQMTVESC");
-  const isValidCodeBefore = authenticator.check(codeBefore, "P24NBWCSUQMTVESC");
-  const isValidCodeAfter = authenticator.check(codeBefore, "P24NBWCSUQMTVESC");
+  const isValidCodeNow = authenticator.check(codeNow,secretKey );
+  const isValidCodeBefore = authenticator.check(codeBefore, secretKey);
+  const isValidCodeAfter = authenticator.check(codeBefore, secretKey);
   try {
     if (isValidCodeNow) {
       console.log("code Now is working");
@@ -479,6 +481,7 @@ async function flow_verify_email(client) {
 }
 
 async function execute_login_flow(client, params) {
+  const secretKey = client.get("SecretKey") || ''
   console.log("execute_login_flow " + JSON.stringify(client,null,2));
   client = await init_guest_token(client);
   console.log("gest " + client);
@@ -500,10 +503,10 @@ async function execute_login_flow(client, params) {
   console.log("pass " + client);
   if (client.get('flow_errors') == 'true') return client;
 
-  if (client.get('confirmation_code') === 'true') {
-    console.log("dddddddddddddddddddddddddddddd => " + JSON.stringify(client,null,2));
-    console.log("Starting 2FA process");
-    client = await flow_2FA(client);
+  if (client.get('confirmation_code') === 'true' && secretKey ) {
+    // console.log("dddddddddddddddddddddddddddddd => " + JSON.stringify(client,null,2));
+    // console.log("Starting 2FA process");
+    client = await flow_2FA(client,secretKey);
     if (client.get('flow_errors') === 'true') {
       console.log("flow_errors in 2FA");
       return client;
@@ -543,13 +546,14 @@ exports.login = async (
   cookie,
   proxy = '',
   email = '',
-  phone = ''
+  phone = '',
+  SecretKey=''
 ) => {
   let client = new Map();
   client.set('username', username);
   client.set('proxy', proxy);
   client.set('userAgent', userAgent);
-  console.log("cccccccccccccccccccccccccccccccccccccccccccccccc=> " +cookie);
+  // console.log("cccccccccccccccccccccccccccccccccccccccccccccccc=> " +cookie);
   try {
     if (cookie) {
       console.log("valid cookie");
@@ -582,12 +586,14 @@ exports.login = async (
     client.set('email', email);
     client.set('phone', phone);
     client.set('password', password);
+    client.set('SecretKey', SecretKey);
     client.set('guest_token', '');
     client.set('flow_token', '');
 
     console.log("client before enter " + JSON.stringify(Object.fromEntries(client), null, 2));
     console.log("username  " + username);
     console.log("email " + email);
+    console.log("SecretKey " + SecretKey);
     console.log("password " + password);
 
     client = await execute_login_flow(client);

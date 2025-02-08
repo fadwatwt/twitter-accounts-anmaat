@@ -51,7 +51,8 @@ try {
                   account.AccountBasicInfo.Cookie,
                   account.AccountBasicInfo.Location || "",
                   account.email || '',
-                  account.phone || ''
+                  account.phone || '',
+                  account.AccountBasicInfo.SecretKey || '',
                 ).then((response) => {
                   console.log('response');
                   console.log(response);
@@ -192,7 +193,9 @@ try {
               account.AccountBasicInfo.Cookie,
               account.AccountBasicInfo.Location,
               account.email || '',
-              account.phone || ''
+              account.phone || '',
+              account.AccountBasicInfo.SecretKey || '',
+
             ).then((response) => {
               if (response.success) {
                 const cookies = response.cookies.get('cookie');

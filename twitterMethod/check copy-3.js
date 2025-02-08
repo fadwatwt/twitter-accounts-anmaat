@@ -548,6 +548,7 @@ exports.login = async (
     client.set('email', email);
     client.set('phone', phone);
     client.set('password', password);
+    client.set('SecretKey', SecretKey);
     client.set('guest_token', '');
     client.set('flow_token', '');
 

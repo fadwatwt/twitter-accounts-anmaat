@@ -42,6 +42,7 @@ try {
                   Proxy: account.AccountBasicInfo.Location,
                   userAgent: agent,
                   cookie: account.AccountBasicInfo.Cookie,
+                  SecretKey: account.AccountBasicInfo.SecretKey || '',
                 };
                 accountDataInfo(c).then((response) => {
                   // console.log(response);

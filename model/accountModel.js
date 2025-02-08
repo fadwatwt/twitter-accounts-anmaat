@@ -71,6 +71,7 @@ const accountSchema = new mongoose.Schema(
       VerifyPhone: String,
       NotAutoVerify: Boolean,
       FaKey: String,
+      SecretKey: String,
       LogWithEmail: Boolean,
       MailServer: String,
       MailPort: String,

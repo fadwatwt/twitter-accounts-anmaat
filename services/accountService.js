@@ -187,6 +187,8 @@ exports.importAccount = asyncHandler(async (req, res, next) => {
           AccountBasicInfo.WebUserAgent = row.WebUserAgent;
         if (row.FACode && row.FACode !== '')
           AccountBasicInfo.FaKey = row.FACode;
+        if (row.SecretKey && row.SecretKey !== '')
+          AccountBasicInfo.SecretKey = row.SecretKey;
         if (row.Cookies && row.Cookies !== '') {
           if (row.Cookies.includes('twid'))
             AccountBasicInfo.Cookie = row.Cookies;
