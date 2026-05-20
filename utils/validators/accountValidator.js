@@ -1,7 +1,6 @@
 const { check, body } = require('express-validator');
 const validatorMiddleware = require('../../middleware/validatorMiddleware');
 const AccountCategory = require('../../model/accountCategoryModel');
-const User = require('../../model/userModel');
 const Account = require('../../model/accountModel');
 const { AccountStatus } = require('../../model/AccountStatusModel');
 const InstaAccount = require('../../model/instaAccountCategory');
@@ -39,16 +38,7 @@ exports.createAccountValidator = [
     .optional()
     .isEmail()
     .withMessage('تنسيق البريد الالكتروني خاطئ'),
-  check('employeeUser')
-    .notEmpty()
-    .withMessage('الموظف المسؤول عن الحساب مطلوب')
-    .custom((userID) =>
-      User.findById(userID).then((user) => {
-        if (!user) {
-          return Promise.reject(new Error(`لايوجد موظف بهذا الرقم ${userID}`));
-        }
-      })
-    ),
+  check('employeeUser').optional(),
   validatorMiddleware,
 ];
 
@@ -86,16 +76,7 @@ exports.importAccountValidator = [
         }
       })
     ),
-  check('employeeUser')
-    .notEmpty()
-    .withMessage('الموظف المسؤول عن الحسابات مطلوب')
-    .custom((userID) =>
-      User.findById(userID).then((user) => {
-        if (!user) {
-          return Promise.reject(new Error(`لايوجد موظف بهذا الرقم ${userID}`));
-        }
-      })
-    ),
+  check('employeeUser').optional(),
   validatorMiddleware,
 ];
 
@@ -110,16 +91,7 @@ exports.importInstaAccountValidator = [
         }
       })
     ),
-  check('employeeUser')
-    .notEmpty()
-    .withMessage('الموظف المسؤول عن الحسابات مطلوب')
-    .custom((userID) =>
-      User.findById(userID).then((user) => {
-        if (!user) {
-          return Promise.reject(new Error(`لايوجد موظف بهذا الرقم ${userID}`));
-        }
-      })
-    ),
+  check('employeeUser').optional(),
   validatorMiddleware,
 ];
 

@@ -1,5 +1,4 @@
 const express = require('express');
-const { roles } = require('../model/roleModel');
 
 const {
   analyticValidator,
@@ -35,266 +34,206 @@ const {
   replyService,
   uploadtxtReplyFile,
   captcha,
-  viewTweet, tweetSetOfAccountsForNotTweet, resizeImages, tweetsSetOfAccountsForPublisher, getTweetsNotPublish,
+  viewTweet,
+  tweetSetOfAccountsForNotTweet,
+  resizeImages,
+  tweetsSetOfAccountsForPublisher,
+  getTweetsNotPublish,
   getTweetsForPublisher,
 } = require('../services/twitterService');
 
-const authService = require('../services/authService');
-const { follow, TweetView } = require('../twitterMethod/twitterMethods');
+const anmaatAuth = require('../middleware/anmaatAuth');
 
 const router = express.Router();
 
 router
   .route('/analytics')
-  .get(authService.protect, analyticValidator, analytics);
+  .get(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_analytics.view'),
+    analyticValidator,
+    analytics,
+  );
 
 router
   .route('/update')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.publisher,
-      roles.advancePublisher,
-      roles.advancePublisherUpload
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.update_profile'),
     uploadimageFile,
     updateValidator,
-    updateProfile
+    updateProfile,
   );
+
 router
   .route('/tweet')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.publisher,
-      roles.publisherWriter,
-      roles.advancePublisher,
-      roles.advancePublisherUpload
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.post'),
     uploadtweetImages,
     tweetValidator,
-    tweet
+    tweet,
   );
 
 router
   .route('/updateAccounts')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.publisher,
-      roles.advancePublisher,
-      roles.advancePublisherUpload
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.update_profile'),
     uploadmix,
     updateAccountsValidator,
-    updateSetOfAccounts
+    updateSetOfAccounts,
   );
+
 router
   .route('/tweetAccounts')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.publisher,
-      roles.publisherWriter,
-      roles.advancePublisher,
-      roles.advancePublisherUpload
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.post'),
     uploadmix,
     updateAccountsValidator,
-    tweetSetOfAccounts
+    tweetSetOfAccounts,
   );
 
+// Submit-for-approval flow: caller drafts a post which a reviewer must approve.
 router
   .route('/tweetAccountsPublisher')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.publisher,
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_content.submit_for_approval'),
     uploadmix,
     resizeImages,
     updateAccountsValidator,
-    tweetSetOfAccountsForNotTweet
+    tweetSetOfAccountsForNotTweet,
   );
 
+// Reviewer publishes a previously-submitted draft.
 router
   .route('/tweetsForPublisher')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.manager
-    ),
-    tweetsSetOfAccountsForPublisher
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_content.approve'),
+    tweetsSetOfAccountsForPublisher,
   );
 
 router
   .route('/tweetsNotPublish')
   .get(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.manager,
-    ),
-    getTweetsNotPublish
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_content.list_pending'),
+    getTweetsNotPublish,
   );
 
 router
   .route('/tweetsNotPublish/:id')
   .get(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.manager,
-      roles.publisher,
+    anmaatAuth.protect,
+    anmaatAuth.anyOf(
+      'social_media_content.list_pending',
+      'social_media_content.submit_for_approval',
     ),
-    getTweetsForPublisher
+    getTweetsForPublisher,
   );
-
 
 router
   .route('/tweet/delete')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.advancePublisher,
-      roles.advancePublisherUpload,
-      roles.publisher
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.delete_post'),
     deleteTweetValidator,
-    deleteTweett
+    deleteTweett,
   );
+
 router
   .route('/tweetAccounts/delete')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.advancePublisher,
-      roles.advancePublisherUpload,
-      roles.publisher
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.delete_post'),
     deleteTweetAccountsValidator,
-    deleteTweettSet
+    deleteTweettSet,
   );
+
 router
   .route('/retweet')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.advancePublisher,
-      roles.advancePublisherUpload,
-      roles.publisher
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.repost'),
     reTweetValidator,
-    retweetService
+    retweetService,
   );
+
 router
   .route('/retweet/delete')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.advancePublisher,
-      roles.advancePublisherUpload
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.delete_repost'),
     deleteTweetAccountsValidator,
-    unretweetService
+    unretweetService,
   );
+
 router
   .route('/like')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.advancePublisher,
-      roles.advancePublisherUpload,
-      roles.publisher
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.like'),
     reTweetValidator,
-    likeService
+    likeService,
   );
+
 router
   .route('/like/delete')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.advancePublisher,
-      roles.advancePublisherUpload,
-      roles.publisher
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.unlike'),
     reTweetValidator,
-    unlikeService
+    unlikeService,
   );
 
 router
   .route('/follow')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.advancePublisher,
-      roles.advancePublisherUpload
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.follow'),
     followValidator,
-    followService
+    followService,
   );
+
 router
   .route('/follow/delete')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.advancePublisher,
-      roles.advancePublisherUpload
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.unfollow'),
     followValidator,
-    unfollowService
+    unfollowService,
   );
 
 router
   .route('/reply')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.advancePublisher,
-      roles.advancePublisherUpload,
-      roles.publisher
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.reply'),
     uploadtxtReplyFile,
     replyValidator,
-    replyService
+    replyService,
   );
+
 router.route('/resolve').post(
-  authService.protect,
+  anmaatAuth.protect,
   resolveValidator,
   function (req, res, next) {
-    req.setTimeout(600000); //set a 20s timeout for this request
+    req.setTimeout(600000);
     next();
   },
-  captcha
+  captcha,
 );
 
 router
   .route('/tweet/view')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.publisher,
-      roles.publisherWriter,
-      roles.advancePublisher,
-      roles.advancePublisherUpload
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_actions.view'),
     replyValidator,
-    viewTweet
+    viewTweet,
   );
+
 module.exports = router;

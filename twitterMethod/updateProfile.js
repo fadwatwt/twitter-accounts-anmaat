@@ -1,6 +1,6 @@
 const axios = require('axios');
 const setCookie = require('set-cookie-parser');
-const { HttpProxyAgent } = require('http-proxy-agent');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
 const { uploadMedia } = require('./uploadMedia');
 
@@ -45,11 +45,11 @@ async function requestAxios(account, key, url, method = 'get', data = {}) {
     const port = proxy[1];
     const username = proxy[2];
     const password = proxy[3];
-    const httpsAgent = new HttpProxyAgent(
+    const httpsAgent = new HttpsProxyAgent(
       'http://' + username + ':' + password + '@' + ip + ':' + port
     );
 
-    axiosConfig.httpAgent = httpsAgent;
+    axiosConfig.httpsAgent = httpsAgent;
     axiosConfig.proxy = false;
   }
   let response = {};

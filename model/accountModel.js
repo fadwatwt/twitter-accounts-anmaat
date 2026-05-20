@@ -4,11 +4,21 @@ const { AccountStatus } = require('./AccountStatusModel');
 
 const accountSchema = new mongoose.Schema(
   {
+    // anmat subscriber that owns this account (canonical owner for quota and scoping)
+    subscriber_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      index: true,
+      required: [true, 'Subscriber ID is required'],
+    },
+    // anmat user that created/manages this account (Subscriber or Employee)
+    created_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      index: true,
+    },
     employeeUser: {
       type: mongoose.Schema.ObjectId,
       ref: 'user',
       index: true,
-      required: [true, 'رقم الموظف مطلوب'],
     },
     name: {
       type: String,
@@ -56,12 +66,12 @@ const accountSchema = new mongoose.Schema(
       MobileUserAgent: {
         type: String,
         default:
-          'Mozilla/5.0 (Linux; Android 9.0.0; SM-G9500 Build/PPR1.180610.011; wv) AppleWebKit/605.1.15 (KHTML, like Gecko) Chrome/79.0.3945.73 Mobile Safari/604.1',
+          'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
       },
       WebUserAgent: {
         type: String,
         default:
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36',
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
       },
       Cookie: String,
       agent: {

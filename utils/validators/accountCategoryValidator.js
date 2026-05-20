@@ -21,27 +21,12 @@ exports.createCategoryValidator = [
     .isLength({ min: 3 })
     .withMessage('اسم التصنيف قصير')
     .isLength({ max: 32 })
-    .withMessage('اسم التصنيف طويل')
-    .custom((val) =>
-      Category.findOne({ name: val }).then((category) => {
-        if (category) {
-          return Promise.reject(new Error('اسم التصنيف موجود من قبل'));
-        }
-      })
-    ),
+    .withMessage('اسم التصنيف طويل'),
+  // subscriber-scoped uniqueness and parent-ownership checks live in the service layer
   check('parent')
-    .optional()
+    .optional({ nullable: true })
     .isMongoId()
-    .withMessage('تنسيق رقم التصنيف غير صالح')
-    .custom((categoryId) =>
-      Category.findById(categoryId).then((category) => {
-        if (!category) {
-          return Promise.reject(
-            new Error(`لايوجد تصنيف بهذا الرقم: ${categoryId}`)
-          );
-        }
-      })
-    ),
+    .withMessage('تنسيق رقم التصنيف غير صالح'),
   validatorMiddleware,
 ];
 
@@ -83,21 +68,16 @@ exports.updateCategoryValidator = [
     .isMongoId()
     .withMessage('تنسيق رقم التصنيف غير صالح'),
   body('name')
-    .optional() // جعل الاسم اختياريًا
+    .optional()
     .isLength({ min: 3 })
     .withMessage('اسم التصنيف قصير')
     .isLength({ max: 32 })
-    .withMessage('اسم التصنيف طويل')
-    .custom((val, { req }) => {
-      // التحقق من وجود قيمة جديدة لحقل الاسم قبل التحقق من صحته
-      if (req.body.name) {
-        return Category.findOne({ name: val }).then((category) => {
-          if (category) {
-            return Promise.reject(new Error('اسم التصنيف موجود بالفعل'));
-          }
-        });
-      }
-    }),
+    .withMessage('اسم التصنيف طويل'),
+  body('parent')
+    .optional({ nullable: true })
+    .custom((val) => val === null || /^[0-9a-fA-F]{24}$/.test(val))
+    .withMessage('تنسيق رقم التصنيف غير صالح'),
+  // subscriber-scoped uniqueness and parent-ownership checks live in the service layer
   validatorMiddleware,
 ];
 

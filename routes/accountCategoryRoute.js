@@ -1,5 +1,4 @@
 const express = require('express');
-const { roles } = require('../model/roleModel');
 const {
   getCategoryValidator,
   createCategoryValidator,
@@ -25,106 +24,141 @@ const {
   updateInstaAccountCategory,
   deleteInstaAccountCategory,
   moveInstaCategory,
-  instaDescendants, deleteCategoryAccountSet, deleteCategoryInstaAccountSet
+  instaDescendants,
+  deleteCategoryAccountSet,
+  deleteCategoryInstaAccountSet,
+  scopeCategoriesToSubscriber,
 } = require('../services/accountCategoryService');
 
-const authService = require('../services/authService');
+const anmaatAuth = require('../middleware/anmaatAuth');
 const { categoryGroupDeleteValidator } = require('../utils/validators/categoryValidator');
-const { deleteCategorySet } = require('../services/categoryService');
 
 const router = express.Router();
+
 router
   .route('/descendants')
-  .get(authService.protect, descendantsCategoryValidator, descendants);
-  router
+  .get(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.list'),
+    scopeCategoriesToSubscriber,
+    descendantsCategoryValidator,
+    descendants,
+  );
+
+router
   .route('/insta/descendants')
-  .get(authService.protect, descendantsCategoryValidator, instaDescendants);
+  .get(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.list'),
+    descendantsCategoryValidator,
+    instaDescendants,
+  );
+
 router
   .route('/move')
   .post(
-    authService.protect,
-    authService.allowedTo(roles.admin, roles.advancePublisherUpload),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.update'),
     moveCategoryValidator,
-    moveCategory
+    moveCategory,
   );
 
-  router
+router
   .route('/insta/move')
   .post(
-    authService.protect,
-    authService.allowedTo(roles.admin, roles.advancePublisherUpload),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.update'),
     moveCategoryValidator,
-    moveInstaCategory
+    moveInstaCategory,
   );
 
 router
   .route('/')
-  .get(authService.protect, getAccountCategories)
+  .get(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.list'),
+    scopeCategoriesToSubscriber,
+    getAccountCategories,
+  )
   .post(
-    authService.protect,
-    authService.allowedTo(roles.admin, roles.advancePublisherUpload),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.create'),
     createCategoryValidator,
-    createAccountCategory
+    createAccountCategory,
   );
 
-  router
+router
   .route('/insta')
-  .get(authService.protect, getInstaAccountCategories)
+  .get(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.list'),
+    getInstaAccountCategories,
+  )
   .post(
-    authService.protect,
-    authService.allowedTo(roles.admin, roles.advancePublisherUpload),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.create'),
     createInstaCategoryValidator,
-    createInstaAccountCategory
+    createInstaAccountCategory,
   );
 
 router
   .route('/:id')
-  .get(authService.protect, getCategoryValidator, getAccountCategory)
+  .get(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.list'),
+    getCategoryValidator,
+    getAccountCategory,
+  )
   .put(
-    authService.protect,
-    authService.allowedTo(roles.admin, roles.advancePublisherUpload),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.update'),
     updateCategoryValidator,
-    updateAccountCategory
+    updateAccountCategory,
   )
   .delete(
-    authService.protect,
-    authService.allowedTo(roles.admin, roles.advancePublisherUpload),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.delete'),
     deleteCategoryValidator,
-    deleteAccountCategory
+    deleteAccountCategory,
   );
 
-  router
+router
   .route('/insta/:id')
-  .get(authService.protect, getCategoryValidator, getInstaAccountCategory)
+  .get(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.list'),
+    getCategoryValidator,
+    getInstaAccountCategory,
+  )
   .put(
-    authService.protect,
-    authService.allowedTo(roles.admin, roles.advancePublisherUpload),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.update'),
     updateInstaCategoryValidator,
-    updateInstaAccountCategory
+    updateInstaAccountCategory,
   )
   .delete(
-    authService.protect,
-    authService.allowedTo(roles.admin, roles.advancePublisherUpload),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.delete'),
     deleteCategoryValidator,
-    deleteInstaAccountCategory
+    deleteInstaAccountCategory,
   );
 
 router
   .route('/someDelete')
   .post(
-    authService.protect,
-    authService.allowedTo(roles.admin,roles.manager),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.delete'),
     categoryGroupDeleteValidator,
-    deleteCategoryAccountSet
+    deleteCategoryAccountSet,
   );
+
 router
   .route('/insta/someDelete')
   .post(
-    authService.protect,
-    authService.allowedTo(roles.admin,roles.manager),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_categories.delete'),
     categoryGroupDeleteValidator,
-    deleteCategoryInstaAccountSet
+    deleteCategoryInstaAccountSet,
   );
-
 
 module.exports = router;

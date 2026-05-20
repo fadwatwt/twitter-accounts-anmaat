@@ -1,5 +1,4 @@
 const express = require('express');
-const { roles } = require('../model/roleModel');
 
 const {
   getAccountValidator,
@@ -17,6 +16,7 @@ const {
 const {
   getAccounts,
   getAccount,
+  getAccountsCount,
   createAccount,
   updateAccount,
   deleteAccount,
@@ -29,84 +29,147 @@ const {
   check,
   accountData,
   deleteAccountSet,
-  deleteInstaAccountSet, newUpadteAccount,
+  deleteInstaAccountSet,
+  newUpadteAccount,
+  scopeToSubscriber,
 } = require('../services/accountService');
 
-const authService = require('../services/authService');
+const anmaatAuth = require('../middleware/anmaatAuth');
 
 const router = express.Router();
 
 router
   .route('/tweet')
-  .get(authService.protect, getAccounts)
-  .post(authService.protect, createAccountValidator, createAccount);
+  .get(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.list'),
+    scopeToSubscriber,
+    getAccounts,
+  )
+  .post(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.create'),
+    createAccountValidator,
+    createAccount,
+  );
 
-router.route('/insta').get(authService.protect, getAccountsForInsta);
+router
+  .route('/tweet/count')
+  .get(anmaatAuth.protect, getAccountsCount);
+
+router
+  .route('/insta')
+  .get(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.list'),
+    scopeToSubscriber,
+    getAccountsForInsta,
+  );
+
 router
   .route('/:id')
-  .get(authService.protect, getAccountValidator, getAccount)
-  .put(authService.protect, updateAccountValidator, newUpadteAccount)
-  .delete(authService.protect, deleteAccountValidator, deleteAccount);
+  .get(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.view'),
+    getAccountValidator,
+    getAccount,
+  )
+  .put(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.update'),
+    updateAccountValidator,
+    newUpadteAccount,
+  )
+  .delete(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.delete'),
+    deleteAccountValidator,
+    deleteAccount,
+  );
 
 router
   .route('/insta/:id')
-  .get(authService.protect, getAccountValidator, getAccount)
-  .put(authService.protect, updateAccountValidator, updateAccount)
-  .delete(authService.protect, deleteAccountValidator, deleteAccount);
+  .get(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.view'),
+    getAccountValidator,
+    getAccount,
+  )
+  .put(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.update'),
+    updateAccountValidator,
+    updateAccount,
+  )
+  .delete(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.delete'),
+    deleteAccountValidator,
+    deleteAccount,
+  );
 
 router.route('/import/tweet').post(
-  authService.protect,
-  authService.allowedTo(
-    roles.admin,
-    roles.manager,
-    roles.advancePublisher,
-    roles.advancePublisherUpload,
-    roles.publisher,
-    roles.publisherWriter
-  ),
+  anmaatAuth.protect,
+  anmaatAuth.hasPermission('social_media_accounts.import'),
   uploadimportFile,
   importAccountValidator,
-
-  importAccount
+  importAccount,
 );
 
 router
   .route('/import/insta')
   .post(
-    authService.protect,
-    authService.allowedTo(
-      roles.admin,
-      roles.manager,
-      roles.advancePublisher,
-      roles.insta
-    ),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.import'),
     uploadimportFile,
     importInstaAccountValidator,
-    importAccountForInsta
+    importAccountForInsta,
   );
 
 router
   .route('/binding')
   .post(
-    authService.protect,
-    authService.allowedTo(roles.admin, roles.manager),
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.bind_proxy'),
     uploadtxtProxyFile,
     pindingValidator,
-    bindingProxy
+    bindingProxy,
   );
-router.route('/check').post(authService.protect, checkValidator, check);
+
+router
+  .route('/check')
+  .post(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.update'),
+    checkValidator,
+    check,
+  );
+
 router
   .route('/data')
-  .post(authService.protect, accountDataValidator, accountData);
+  .post(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.view'),
+    accountDataValidator,
+    accountData,
+  );
+
 router
   .route('/delete/tweet')
-  .post(authService.protect, accountGroupDeleteValidator, deleteAccountSet);
+  .post(
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.delete'),
+    accountGroupDeleteValidator,
+    deleteAccountSet,
+  );
 
 router
   .route('/delete/insta')
   .post(
-    authService.protect,
+    anmaatAuth.protect,
+    anmaatAuth.hasPermission('social_media_accounts.delete'),
     accountGroupDeleteValidator,
-    deleteInstaAccountSet
+    deleteInstaAccountSet,
   );
+
 module.exports = router;

@@ -1,7 +1,7 @@
 const axios = require('axios');
 const puppeteer = require('puppeteer');
 const setCookie = require('set-cookie-parser');
-const { HttpProxyAgent } = require('http-proxy-agent');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 const url = require('url');
 const fs = require('fs');
 const querystring = require('querystring');
@@ -91,11 +91,11 @@ exports.requestAxios = async (
     const port = proxy[1];
     const username = proxy[2];
     const password = proxy[3];
-    const httpsAgent = new HttpProxyAgent(
+    const httpsAgent = new HttpsProxyAgent(
       'http://' + username + ':' + password + '@' + ip + ':' + port
     );
 
-    axiosConfig.httpAgent = httpsAgent;
+    axiosConfig.httpsAgent = httpsAgent;
     axiosConfig.proxy = false;
   }
   let response = {};
@@ -184,11 +184,11 @@ const requestAxios = async (
     const port = proxy[1];
     const username = proxy[2];
     const password = proxy[3];
-    const httpsAgent = new HttpProxyAgent(
+    const httpsAgent = new HttpsProxyAgent(
       'http://' + username + ':' + password + '@' + ip + ':' + port
     );
 
-    axiosConfig.httpAgent = httpsAgent;
+    axiosConfig.httpsAgent = httpsAgent;
     axiosConfig.proxy = false;
   }
   let response = {};
@@ -278,11 +278,11 @@ async function requestAxiosNormal(
     const port = proxy[1];
     const username = proxy[2];
     const password = proxy[3];
-    const httpsAgent = new HttpProxyAgent(
+    const httpsAgent = new HttpsProxyAgent(
       'http://' + username + ':' + password + '@' + ip + ':' + port
     );
 
-    axiosConfig.httpAgent = httpsAgent;
+    axiosConfig.httpsAgent = httpsAgent;
     axiosConfig.proxy = false;
   }
   let response = {};

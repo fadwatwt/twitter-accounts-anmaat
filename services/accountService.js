@@ -4,6 +4,7 @@ const { Worker } = require('worker_threads');
 const asyncHandler = require('express-async-handler');
 const factory = require('./handlersFactory');
 const Account = require('../model/accountModel');
+const Category = require('../model/accountCategoryModel');
 const InsAccount = require('../model/instaModel');
 const ApiError = require('../utils/apiError');
 const path = require('path');
@@ -15,6 +16,23 @@ const {
 const { log } = require('console');
 const { requestAxios } = require('../twitterMethod/twitterMethods');
 const { uploadMedia } = require('../twitterMethod/uploadMedia');
+const {
+  enforceCreateQuota,
+  countAccountsForSubscriber,
+} = require('./quotaService');
+
+// Scopes every account query to the caller's subscriber so accounts created
+// by other subscribers/orgs are never visible.
+exports.scopeToSubscriber = asyncHandler(async (req, res, next) => {
+  if (!req.subscriberId) {
+    return next(new ApiError('Subscriber context is required', 401));
+  }
+  req.filterObj = {
+    ...(req.filterObj || {}),
+    subscriber_id: req.subscriberId,
+  };
+  next();
+});
 
 // @desc    Get list of accounts
 // @route   GET /api/v1/accounts
@@ -25,27 +43,135 @@ exports.getAccounts = factory.getAll(Account, 'Categories');
 
 exports.getAccountsForInsta = factory.getAll(InsAccount);
 
-// @desc    Get specific account by id
+// @desc    Get count of accounts owned by caller's subscriber
+// @route   GET /api/v1/accounts/tweet/count
+// @access  Private
+exports.getAccountsCount = asyncHandler(async (req, res) => {
+  const count = await countAccountsForSubscriber(req.subscriberId);
+  res.status(200).json({ data: { count } });
+});
+
+// @desc    Get specific account by id (scoped to subscriber)
 // @route   GET /api/v1/accounts/:id
 // @access  Private
-exports.getAccount = factory.getOne(Account);
+exports.getAccount = asyncHandler(async (req, res, next) => {
+  const account = await Account.findOne({
+    _id: req.params.id,
+    subscriber_id: req.subscriberId,
+  });
+  if (!account) {
+    return next(new ApiError(`No account found for id ${req.params.id}`, 404));
+  }
+  res.status(200).json({ data: account });
+});
 
 // @desc    Create account
 // @route   POST  /api/v1/accounts
 // @access  Private/Admin
-exports.createAccount = factory.createOne(Account);
+exports.createAccount = asyncHandler(async (req, res, next) => {
+  await enforceCreateQuota(req);
+
+  // The Category must belong to the same subscriber — prevents a user from
+  // attaching their account to another tenant's category.
+  if (req.body.Category) {
+    const category = await Category.findOne({
+      _id: req.body.Category,
+      subscriber_id: req.subscriberId,
+    });
+    if (!category) {
+      return next(new ApiError('Category not found for this subscriber', 404));
+    }
+  }
+
+  // Lift the optional 2FA secret onto AccountBasicInfo.SecretKey (where the
+  // login worker reads it from). Strip whitespace and uppercase so the
+  // base32 secret is in the canonical form expected by otplib.
+  const { SecretKey, location, AccountBasicInfo, ...rest } = req.body;
+  const payload = {
+    ...rest,
+    subscriber_id: req.subscriberId,
+    created_by: req.userId,
+  };
+  if (SecretKey || location || AccountBasicInfo) {
+    payload.AccountBasicInfo = {
+      ...(AccountBasicInfo || {}),
+    };
+    if (SecretKey) {
+      payload.AccountBasicInfo.SecretKey = String(SecretKey)
+        .replace(/\s+/g, '')
+        .toUpperCase();
+    }
+    if (location) {
+      payload.AccountBasicInfo.Location = String(location).trim();
+    }
+  }
+
+  const newDoc = await Account.create(payload);
+  res.status(201).json({ data: newDoc });
+});
 
 // @desc    Update specific account
 // @route   PUT /api/v1/accounts/:id
 // @access  Private/Admin
 exports.newUpadteAccount = async (req, res) => {
-  const { Category, profileImg,bannerImage, name, description, employeeUser,location } = req.body;
-  const  accountId = req.params.id;
-  const errorsMessages = []
+  // Rename `Category` from req.body to `categoryId` to avoid colliding with the
+  // imported `Category` Mongoose model at the top of the file.
+  const {
+    Category: categoryId,
+    profileImg,
+    bannerImage,
+    name,
+    description,
+    employeeUser,
+    location,
+    SecretKey,
+  } = req.body;
+  const Category = categoryId; // preserve original variable name for downstream code
+  const accountId = req.params.id;
+  const errorsMessages = [];
 
   console.log(req.body);
 
-  const account = await Account.findById(accountId);
+  // Scope the account lookup to the caller's subscriber — prevents cross-tenant updates.
+  const account = await Account.findOne({
+    _id: accountId,
+    subscriber_id: req.subscriberId,
+  });
+  if (!account) {
+    return res.status(404).json({ error: 'Account not found' });
+  }
+
+  // If Category is being changed, validate it belongs to the same subscriber.
+  if (categoryId) {
+    const AccountCategory = require('../model/accountCategoryModel');
+    const validCategory = await AccountCategory.findOne({
+      _id: categoryId,
+      subscriber_id: req.subscriberId,
+    });
+    if (!validCategory) {
+      return res.status(404).json({ error: 'Category not found for this subscriber' });
+    }
+  }
+
+  // Persist the 2FA secret key in the DB — this is a local change and never
+  // hits Twitter's API. Normalize to canonical base32 form (no spaces, upper).
+  // Sending an empty string clears the existing key.
+  if (typeof SecretKey === 'string') {
+    const normalized = SecretKey.replace(/\s+/g, '').toUpperCase();
+    await Account.updateOne(
+      { _id: accountId, subscriber_id: req.subscriberId },
+      { $set: { 'AccountBasicInfo.SecretKey': normalized } },
+    );
+  }
+
+  // Persist the proxy location locally in the DB.
+  if (typeof location === 'string') {
+    await Account.updateOne(
+      { _id: accountId, subscriber_id: req.subscriberId },
+      { $set: { 'AccountBasicInfo.Location': location } },
+    );
+  }
+
   const accountData = {
     name: account.name,
     cookie: account.AccountBasicInfo.Cookie,  // استخراج Cookie من AccountBasicInfo
@@ -86,12 +212,26 @@ exports.newUpadteAccount = async (req, res) => {
       }
     }
 
-    if (name || description || location) {
-      let param = {}
+    // Always persist Category and employeeUser changes to the DB —
+    // these are local fields and don't require a Twitter API call.
+    if (Category || employeeUser) {
+      const dbUpdate = {};
+      if (Category) dbUpdate.Category = Category;
+      if (employeeUser) dbUpdate.employeeUser = employeeUser;
+      await Account.findByIdAndUpdate(
+        accountId,
+        { $set: dbUpdate },
+        { new: true }
+      );
+    }
+
+    // Only call the Twitter API if name or description changed AND the
+    // account already has a valid session cookie.
+    if ((name || description) && accountData.cookie && accountData.cookie.includes('twid')) {
+      let param = {};
       console.log("enter name & description condition ");
       if (name) param.name = name;
       if (description) param.description = description;
-      if (location) param.location = location;
 
       const resUpdateProfile = await requestAxios(
         accountData,
@@ -102,26 +242,13 @@ exports.newUpadteAccount = async (req, res) => {
         true
       );
 
-      if (Category || employeeUser) {
-        const updateAccount = await Account.findByIdAndUpdate(
-          accountId,
-          {
-            $set: {
-              Category,
-              employeeUser
-            }
-          },
-          { new: true } // Option to return the updated document
-        );
-      }
-
-      // التعامل مع الاستجابة هنا إذا لزم الأمر
       if (resUpdateProfile?.error) {
-        errorsMessages.push(resUpdateImage?.error)
+        errorsMessages.push({ status: 500, message: resUpdateProfile.error });
       }
     }
-    if(errorsMessages.length > 0){
-      return res.status(500).json(errorsMessages)
+
+    if (errorsMessages.length > 0) {
+      return res.status(500).json(errorsMessages);
     }
     // إرجاع استجابة ناجحة
     return res.status(200).json({ message: "Account updated successfully" });
@@ -214,6 +341,8 @@ exports.importAccount = asyncHandler(async (req, res, next) => {
         account.AccountBasicInfo = AccountBasicInfo;
         account.Category = req.body.Category;
         account.employeeUser = req.body.employeeUser;
+        account.subscriber_id = req.subscriberId;
+        account.created_by = req.userId;
 
         accounts.push(account);
       })
@@ -221,6 +350,22 @@ exports.importAccount = asyncHandler(async (req, res, next) => {
         let insertedDocuments = [];
         let failedInsertions = [];
         let insertedCount = 0;
+        // Enforce quota — refuse partial batches that would exceed the limit.
+        try {
+          const { fetchQuota } = require('./quotaService');
+          const quota = await fetchQuota(req);
+          if (!quota.unlimited && quota.limit !== -1) {
+            const remaining = Math.max(0, quota.limit - quota.used);
+            if (accounts.length > remaining) {
+              return res.status(403).json({
+                error: `Import would exceed quota: ${accounts.length} requested, ${remaining} slots remaining (used ${quota.used}/${quota.limit}).`,
+              });
+            }
+          }
+        } catch (err) {
+          // Soft-fail: surface the error rather than silently bypassing the check
+          return res.status(500).json({ error: err.message });
+        }
         for (let i = 0; i < accounts.length; i++) {
           await Account.create(accounts[i])
             .then((result) => {

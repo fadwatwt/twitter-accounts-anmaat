@@ -8,7 +8,7 @@ const { Worker } = require('worker_threads');
 const path = require('path');
 const ApiError = require('../utils/apiError');
 const ntpClient = require("ntp-client");
-const { authenticator,totp } = require('otplib');
+const { authenticator, totp } = require('otplib');
 
 // دالة لإزالة التكرار للـ ct0
 const removeDuplicateCT0 = (cookies) => {
@@ -276,11 +276,11 @@ async function flow_password(client) {
     }
   );
 }
-async function flow_2FA(client,secretKey) {
+async function flow_2FA(client, secretKey) {
   // console.log("client in flow_2FA => " + secretKey);
-  const [codeNow, codeBefore, codeAfter] =  generate2FACodes(secretKey);
+  const [codeNow, codeBefore, codeAfter] = generate2FACodes(secretKey);
 
-  const isValidCodeNow = authenticator.check(codeNow,secretKey );
+  const isValidCodeNow = authenticator.check(codeNow, secretKey);
   const isValidCodeBefore = authenticator.check(codeBefore, secretKey);
   const isValidCodeAfter = authenticator.check(codeBefore, secretKey);
   try {
@@ -330,7 +330,7 @@ async function flow_2FA(client,secretKey) {
         }
       );
       if (responseBefore?.status === 200) {
-        client.set('flow_errors',false); // ✅ إعادة تعيين flow_errors
+        client.set('flow_errors', false); // ✅ إعادة تعيين flow_errors
         return client;
       }
     }
@@ -482,7 +482,7 @@ async function flow_verify_email(client) {
 
 async function execute_login_flow(client, params) {
   const secretKey = client.get("SecretKey") || ''
-  console.log("execute_login_flow " + JSON.stringify(client,null,2));
+  console.log("execute_login_flow " + JSON.stringify(client, null, 2));
   client = await init_guest_token(client);
   console.log("gest " + client);
   client = await flow_start(client);
@@ -490,7 +490,7 @@ async function execute_login_flow(client, params) {
   client = await flow_instrumentation(client);
   console.log("flow_instrumentation " + client);
   client = await flow_username(client);
-  console.log("username " + JSON.stringify(client,null,2));
+  console.log("username " + JSON.stringify(client, null, 2));
   if (client.get('verify_email') == 'true') {
     console.log("verify_email");
     client = await flow_verify_email(client);
@@ -503,10 +503,10 @@ async function execute_login_flow(client, params) {
   console.log("pass " + client);
   if (client.get('flow_errors') == 'true') return client;
 
-  if (client.get('confirmation_code') === 'true' && secretKey ) {
+  if (client.get('confirmation_code') === 'true' && secretKey) {
     // console.log("dddddddddddddddddddddddddddddd => " + JSON.stringify(client,null,2));
     // console.log("Starting 2FA process");
-    client = await flow_2FA(client,secretKey);
+    client = await flow_2FA(client, secretKey);
     if (client.get('flow_errors') === 'true') {
       console.log("flow_errors in 2FA");
       return client;
@@ -547,7 +547,7 @@ exports.login = async (
   proxy = '',
   email = '',
   phone = '',
-  SecretKey=''
+  SecretKey = ''
 ) => {
   let client = new Map();
   client.set('username', username);
@@ -559,7 +559,7 @@ exports.login = async (
       console.log("valid cookie");
       const account = {
         username: username,
-        cookie:cookie,
+        cookie: cookie,
         userAgent: userAgent,
         proxy: proxy
       };
@@ -582,7 +582,7 @@ exports.login = async (
       }
     }
     console.log('cookie not vaild');
-    client.set("cookie","")
+    client.set("cookie", "")
     client.set('email', email);
     client.set('phone', phone);
     client.set('password', password);
@@ -597,13 +597,13 @@ exports.login = async (
     console.log("password " + password);
 
     client = await execute_login_flow(client);
-    if (!client){
+    if (!client) {
       console.log("client is not found");
     }
-    if (client.get('flow_errors') === 'true'){
+    if (client.get('flow_errors') === 'true') {
       console.log("flow_errors is found");
     }
-    if (!client.get('cookie').includes('twid')){
+    if (!client.get('cookie').includes('twid')) {
       console.log("twid is not found");
     }
 
@@ -621,7 +621,7 @@ exports.login = async (
 
     return { success: true, cookies: client };
 
-  }catch (e) {
+  } catch (e) {
     console.log(e);
     return { success: false };
   }
