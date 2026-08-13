@@ -705,14 +705,20 @@ exports.accountData = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.deleteAccountSet = asyncHandler(async (req, res, next) => {
   const accounts = req.body.accounts;
-  await Account.deleteMany({ _id: { $in: accounts } });
+  const filter = { _id: { $in: accounts } };
+  // Never let a subscriber delete another tenant's accounts; platform/admin
+  // callers (no subscriber context) keep the existing unscoped behavior.
+  if (req.subscriberId) filter.subscriber_id = req.subscriberId;
+  await Account.deleteMany(filter);
 
   res.status(204).send();
 });
 
 exports.deleteInstaAccountSet = asyncHandler(async (req, res, next) => {
   const accounts = req.body.accounts;
-  await InsAccount.deleteMany({ _id: { $in: accounts } });
+  const filter = { _id: { $in: accounts } };
+  if (req.subscriberId) filter.subscriber_id = req.subscriberId;
+  await InsAccount.deleteMany(filter);
 
   res.status(204).send();
 });
